@@ -72,7 +72,7 @@ final so its negative controls exercise the real 19-tool registry.
 
 ### Wave 3 — Expose it on the tool surface
 
-- [~] `T5` — Add optional `tenantId` to all 18 tools and name the organisation in output
+- [x] `T5` — Add optional `tenantId` to all 18 tools and name the organisation in output
   - Files: all 18 `src/tools/list/*.tool.ts`
   - Estimate: large
   - Kind: impl
@@ -84,7 +84,7 @@ final so its negative controls exercise the real 19-tool registry.
     single-organisation case is unchanged and no existing call breaks (design D3). A resolution
     error must surface as the tool's error text, in the same style as the existing error branches.
 
-- [~] `T6` — Add the `list-tenants` tool and register it
+- [x] `T6` — Add the `list-tenants` tool and register it
   - Files: `src/tools/list/list-tenants.tool.ts`, `src/tools/list/index.ts`,
     `src/__guards__/tool-allowlist.ts`
   - Estimate: small
@@ -98,7 +98,7 @@ final so its negative controls exercise the real 19-tool registry.
 
 ### Wave 4 — The runtime egress filter and its guards
 
-- [ ] `T7` — Build the egress filter and wire it into the single funnel
+- [~] `T7` — Build the egress filter and wire it into the single funnel
   - Files: `src/security/egress-filter.ts`, `src/helpers/create-xero-tool.ts`
   - Estimate: medium
   - Kind: impl

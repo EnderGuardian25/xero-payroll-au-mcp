@@ -44,7 +44,7 @@ describe("Guard C — no payload logging (FR9 / AC12)", () => {
   });
 
   describe("the known-clean baseline", () => {
-    it("contains exactly the two inherited console calls, at their known sites", () => {
+    it("contains exactly the known console calls, at their known sites", () => {
       const found = scan.logCalls
         .map(({ file, callee, args }) => ({ file, callee, args }))
         .sort((a, b) => a.file.localeCompare(b.file));
@@ -52,11 +52,44 @@ describe("Guard C — no payload logging (FR9 / AC12)", () => {
       expect(found).toEqual(KNOWN_LOG_CALLS);
     });
 
-    it("logs an Error at both sites — an Error is not a payload", () => {
-      for (const call of scan.logCalls) {
+    it("logs an Error at the two error-reporting sites", () => {
+      /*
+       * This assertion used to cover every log call in the repo, because both
+       * of them were error reports. Change 002 added a third — the egress
+       * filter's redaction warning — so the blanket form became false and is
+       * narrowed here rather than deleted.
+       *
+       * Narrowed, not relaxed: the two inherited sites are still pinned to
+       * logging an `Error` and nothing else, and the third site is covered by
+       * the payload-argument check below plus its own entry in
+       * KNOWN_LOG_CALLS. What is gone is only the claim that *every* log call
+       * in this repo reports an error, which is no longer the case.
+       */
+      const errorSites = scan.logCalls.filter(
+        (call) => !call.file.includes("egress-filter"),
+      );
+
+      expect(errorSites.length).toBe(2);
+      for (const call of errorSites) {
         expect(call.args[call.args.length - 1]).toBe("error");
       }
-      expect(scan.logCalls.length).toBe(2);
+    });
+
+    it("logs no value from the egress filter, only where and what kind", () => {
+      // The one non-error log call. It exists so a redaction is diagnosable,
+      // and it must never carry the value it just refused to return (rule 4).
+      const [egress] = scan.logCalls.filter((call) =>
+        call.file.includes("egress-filter"),
+      );
+
+      expect(egress).toBeDefined();
+      const rendered = egress.args.join(" ");
+      expect(rendered).toContain("toolName");
+      expect(rendered).toContain("finding.kind");
+      expect(rendered).toContain("finding.path");
+      // The matched text never reaches a log line: redactPii is the only code
+      // that holds it, and it returns redacted output rather than the value.
+      expect(rendered).not.toMatch(/\bvalue\s*\}|\bmatched\b|\braw\b/);
     });
 
     it("has no log call passing a payload argument", () => {
