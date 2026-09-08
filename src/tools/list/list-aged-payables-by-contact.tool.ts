@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 import { formatAgedReportFilter } from "../../helpers/format-aged-report-filter.js";
+import { formatReportRows } from "../../helpers/format-report-rows.js";
 import { listXeroAgedPayablesByContact } from "../../handlers/list-aged-payables-by-contact.handler.js";
 
 const ListAgedPayablesByContact = CreateXeroTool(
@@ -49,7 +50,7 @@ const ListAgedPayablesByContact = CreateXeroTool(
         },
         {
           type: "text" as const,
-          text: JSON.stringify(agedPayablesReport.rows, null, 2),
+          text: formatReportRows(agedPayablesReport.rows),
         }
       ],
     };

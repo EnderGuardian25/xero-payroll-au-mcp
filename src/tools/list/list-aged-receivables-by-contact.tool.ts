@@ -2,6 +2,7 @@ import { z } from "zod";
 import { listXeroAgedReceivablesByContact } from "../../handlers/list-aged-receivables-by-contact.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 import { formatAgedReportFilter } from "../../helpers/format-aged-report-filter.js";
+import { formatReportRows } from "../../helpers/format-report-rows.js";
 
 const ListAgedReceivablesByContact = CreateXeroTool(
   "list-aged-receivables-by-contact",
@@ -49,7 +50,7 @@ const ListAgedReceivablesByContact = CreateXeroTool(
         },
         {
           type: "text" as const,
-          text: JSON.stringify(agedReceivablesReport.rows, null, 2),
+          text: formatReportRows(agedReceivablesReport.rows),
         }
       ],
     };
