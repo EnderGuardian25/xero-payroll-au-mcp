@@ -1,6 +1,6 @@
 import type { MCPXeroClient } from "../clients/xero-client.js";
 
-import { isValidTfn } from "./pii-matcher.js";
+import { isValidTfn } from "../security/pii-matcher.js";
 
 /*
  * A stand-in Xero client for the guards, injected via

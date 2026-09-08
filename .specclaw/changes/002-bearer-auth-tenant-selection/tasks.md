@@ -20,7 +20,7 @@ final so its negative controls exercise the real 19-tool registry.
 
 ### Wave 1 — Foundations: shared matcher, tenant resolution
 
-- [ ] `T1` — Move the PII matcher into production reach
+- [~] `T1` — Move the PII matcher into production reach
   - Files: `src/security/pii-matcher.ts` (from `src/__guards__/pii-matcher.ts`),
     `src/__guards__/pii-matcher.test.ts`, `src/__guards__/scan-pii-fields.ts`,
     `src/__guards__/fake-xero-client.ts`, `scripts/scan-staged-fixtures.mjs`

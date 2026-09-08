@@ -24,7 +24,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 // can be invoked from any subdirectory of the repo, and a dynamic import()
 // resolves relative to the importing module rather than to cwd.
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const MATCHER_PATH = join(REPO, "dist", "__guards__", "pii-matcher.js");
+const MATCHER_PATH = join(REPO, "dist", "security", "pii-matcher.js");
 const MATCHER = pathToFileURL(MATCHER_PATH).href;
 
 if (!existsSync(MATCHER_PATH)) {
