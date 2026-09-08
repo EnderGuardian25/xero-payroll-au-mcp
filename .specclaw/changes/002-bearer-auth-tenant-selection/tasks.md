@@ -20,7 +20,7 @@ final so its negative controls exercise the real 19-tool registry.
 
 ### Wave 1 — Foundations: shared matcher, tenant resolution
 
-- [~] `T1` — Move the PII matcher into production reach
+- [x] `T1` — Move the PII matcher into production reach
   - Files: `src/security/pii-matcher.ts` (from `src/__guards__/pii-matcher.ts`),
     `src/__guards__/pii-matcher.test.ts`, `src/__guards__/scan-pii-fields.ts`,
     `src/__guards__/fake-xero-client.ts`, `scripts/scan-staged-fixtures.mjs`
@@ -32,7 +32,7 @@ final so its negative controls exercise the real 19-tool registry.
     afterwards; check its path assumptions. Add the AC11 case here while touching the tests: a tenant
     GUID must not be flagged. `npm test` green before moving on.
 
-- [ ] `T2` — Build tenant resolution, and stop the client choosing
+- [~] `T2` — Build tenant resolution, and stop the client choosing
   - Files: `src/clients/resolve-tenant.ts`, `src/clients/xero-client.ts`,
     `src/clients/__tests__/resolve-tenant.test.ts`
   - Estimate: medium

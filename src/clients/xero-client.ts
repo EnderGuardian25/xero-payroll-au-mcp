@@ -25,12 +25,25 @@ export abstract class MCPXeroClient extends XeroClient {
 
   public abstract authenticate(): Promise<void>;
 
+  /*
+   * Deliberately does NOT choose a tenant any more.
+   *
+   * Upstream assigned the first connection to `this.tenantId` here. Two problems,
+   * and the second is the serious one:
+   *
+   *   - The SDK sorts connections by `updatedDateUtc` descending, so "first" is
+   *     whichever organisation was touched most recently. It moves on its own.
+   *   - `tenantId` is a public mutable field on a process-wide singleton. Once
+   *     tools can target different organisations, assigning it per call is a
+   *     data race: two in-flight calls read each other's tenant, intermittently,
+   *     and the wrong answer looks exactly like the right one.
+   *
+   * So the tenant is now resolved per call by `resolve-tenant.ts` and threaded
+   * through as an argument. No handler reads this field (spec FR5, design D1).
+   */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   override async updateTenants(fullOrgDetails?: boolean): Promise<any[]> {
     await super.updateTenants(fullOrgDetails);
-    if (this.tenants && this.tenants.length > 0) {
-      this.tenantId = this.tenants[0].tenantId;
-    }
     return this.tenants;
   }
 
@@ -166,22 +179,18 @@ class CustomConnectionsXeroClient extends MCPXeroClient {
       },
     );
 
-    // Get the tenant ID from the connections endpoint
-    const token = response.data.access_token;
-    const connectionsResponse = await axios.get(
-      "https://api.xero.com/connections",
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
-      },
-    );
-
-    if (connectionsResponse.data && connectionsResponse.data.length > 0) {
-      this.tenantId = connectionsResponse.data[0].tenantId;
-    }
-
+    /*
+     * The second copy of the same defect, removed.
+     *
+     * Upstream fetched /connections here purely to assign the first
+     * connection to `this.tenantId` — the identical "read whichever
+     * organisation is first" bug as in `updateTenants`, but written against a
+     * different variable, which is why a grep that found one would have
+     * missed the other.
+     *
+     * Tenant selection now belongs to `resolve-tenant.ts` for both auth modes,
+     * so the call was doing nothing but cost a request on every authenticate.
+     */
     return response.data;
   }
 
@@ -209,7 +218,15 @@ class BearerTokenXeroClient extends MCPXeroClient {
       access_token: this.bearerToken,
     });
 
-    await this.updateTenants();
+    /*
+     * `false` matters. The SDK defaults `fullOrgDetails` to true, which fans
+     * out one `getOrganisations` call per authorised organisation — so a token
+     * on twelve orgs spends thirteen requests here, against a 60/minute
+     * per-tenant limit, to populate an `orgData` field nothing in this repo
+     * reads. The connections payload already carries tenant id, name and type,
+     * which is all `resolve-tenant.ts` needs.
+     */
+    await this.updateTenants(false);
   }
 }
 
