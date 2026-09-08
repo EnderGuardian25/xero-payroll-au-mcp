@@ -1,0 +1,10 @@
+{
+  "tier": "deep",
+  "domains": ["security"],
+  "rationale": "Adds mandatory tenant selection (error instead of silent guessing) to all 18 tools and a runtime PII egress filter on every response, establishing new trust and authorization boundaries.",
+  "signals": {
+    "blast_radius": "18 tools gain optional tenantId parameter and output field; new list-tenants tool, mint-token script, runtime egress filter, matcher relocation, and deletion of tenants[0] fallback",
+    "unresolved": "Five open questions listed but none change the file list or architecture if answered differently; all are tuning (UX naming), sequencing (split timing), or deployment (counter consumption)",
+    "irreversibility": "Revertible in git with no persistent data migration, but undoing removes the bugs being fixed: silent organization confusion and PII egress on live responses"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "sig": "1266827317 9465",
+  "tier": "deep",
+  "tier_source": "classifier",
+  "rationale": "Adds mandatory tenant selection (error instead of silent guessing) to all 18 tools and a runtime PII egress filter on every response, establishing new trust and authorization boundaries.",
+  "domains": ["security"],
+  "seats": [
+    {"role": "party-po", "model": "opus"},
+    {"role": "party-architect", "model": "opus"},
+    {"role": "party-ba", "model": "opus"},
+    {"role": "party-security", "model": "opus"},
+    {"role": "party-visionary", "model": "opus"}
+  ],
+  "dropped": []
+}

@@ -1,7 +1,7 @@
 # 🦞 SpecClaw Dashboard
 
 **Project:** xero-payroll-au-mcp
-**Last Updated:** 2026-09-08 16:18 UTC
+**Last Updated:** 2026-09-08 18:09 UTC
 
 ## Active Changes
 
@@ -9,7 +9,8 @@ _No active changes._
 
 ## Pending Proposals
 
-_None._
+
+- 📋 **002-bearer-auth-tenant-selection** — proposal ready, awaiting planning
 
 ## Recently Completed
 
