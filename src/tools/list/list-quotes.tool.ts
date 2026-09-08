@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { listXeroQuotes } from "../../handlers/list-xero-quotes.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
+import {
+  resolveTenantForTool,
+  tenantIdArg,
+} from "../../helpers/tenant-arg.js";
 
 const ListQuotesTool = CreateXeroTool(
   "list-quotes",
@@ -9,12 +13,16 @@ const ListQuotesTool = CreateXeroTool(
   Ask the user if they want the next page of quotes after running this tool if 10 quotes are returned. 
   If they do, call this tool again with the page number and the contact provided in the previous call.`,
   {
+    ...tenantIdArg,
     page: z.number(),
     contactId: z.string().optional(),
     quoteNumber: z.string().optional(),
   },
-  async ({ page, contactId, quoteNumber }) => {
-    const response = await listXeroQuotes(page, contactId, quoteNumber);
+  async ({ tenantId, page, contactId, quoteNumber }) => {
+    const resolved = await resolveTenantForTool(tenantId, "quotes");
+    if (!resolved.ok) return resolved.result;
+
+    const response = await listXeroQuotes(resolved.tenant.tenantId, page, contactId, quoteNumber);
     if (response.error !== null) {
       return {
         content: [
@@ -32,7 +40,7 @@ const ListQuotesTool = CreateXeroTool(
       content: [
         {
           type: "text" as const,
-          text: `Found ${quotes?.length || 0} quotes:`,
+          text: `Found ${quotes?.length || 0} quotes in ${resolved.tenant.tenantName}:`,
         },
         ...(quotes?.map((quote) => ({
           type: "text" as const,

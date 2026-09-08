@@ -32,7 +32,7 @@ final so its negative controls exercise the real 19-tool registry.
     afterwards; check its path assumptions. Add the AC11 case here while touching the tests: a tenant
     GUID must not be flagged. `npm test` green before moving on.
 
-- [~] `T2` — Build tenant resolution, and stop the client choosing
+- [x] `T2` — Build tenant resolution, and stop the client choosing
   - Files: `src/clients/resolve-tenant.ts`, `src/clients/xero-client.ts`,
     `src/clients/__tests__/resolve-tenant.test.ts`
   - Estimate: medium
@@ -49,7 +49,7 @@ final so its negative controls exercise the real 19-tool registry.
 
 ### Wave 2 — Thread the tenant through the handlers
 
-- [ ] `T3` — Give all 18 handlers an explicit tenant parameter
+- [x] `T3` — Give all 18 handlers an explicit tenant parameter
   - Files: all 18 `src/handlers/*.handler.ts`
   - Estimate: large
   - Kind: refactor
@@ -61,7 +61,7 @@ final so its negative controls exercise the real 19-tool registry.
     touches everything, so `npm run build` and `npm test` must both be green at the end before tools
     change.
 
-- [ ] `T4` — Add the connections handler
+- [x] `T4` — Add the connections handler
   - Files: `src/handlers/list-xero-connections.handler.ts`
   - Estimate: small
   - Kind: impl
@@ -72,7 +72,7 @@ final so its negative controls exercise the real 19-tool registry.
 
 ### Wave 3 — Expose it on the tool surface
 
-- [ ] `T5` — Add optional `tenantId` to all 18 tools and name the organisation in output
+- [~] `T5` — Add optional `tenantId` to all 18 tools and name the organisation in output
   - Files: all 18 `src/tools/list/*.tool.ts`
   - Estimate: large
   - Kind: impl
@@ -84,7 +84,7 @@ final so its negative controls exercise the real 19-tool registry.
     single-organisation case is unchanged and no existing call breaks (design D3). A resolution
     error must surface as the tool's error text, in the same style as the existing error branches.
 
-- [ ] `T6` — Add the `list-tenants` tool and register it
+- [~] `T6` — Add the `list-tenants` tool and register it
   - Files: `src/tools/list/list-tenants.tool.ts`, `src/tools/list/index.ts`,
     `src/__guards__/tool-allowlist.ts`
   - Estimate: small

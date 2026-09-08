@@ -1,13 +1,22 @@
 import { listXeroOrganisationDetails } from "../../handlers/list-xero-organisation-details.handler.js";
 import { getExternalLink } from "../../helpers/get-external-link.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
+import {
+  resolveTenantForTool,
+  tenantIdArg,
+} from "../../helpers/tenant-arg.js";
 
 const ListOrganisationDetailsTool = CreateXeroTool(
   "list-organisation-details",
   "Lists the organisation details from Xero. Use this tool to get information about the current Xero organisation.",
-  {},
-  async () => {
-    const response = await listXeroOrganisationDetails();
+  {
+    ...tenantIdArg,
+  },
+  async ({ tenantId }) => {
+    const resolved = await resolveTenantForTool(tenantId, "organisation details");
+    if (!resolved.ok) return resolved.result;
+
+    const response = await listXeroOrganisationDetails(resolved.tenant.tenantId);
     if (response.error !== null) {
       return {
         content: [
@@ -93,7 +102,7 @@ const ListOrganisationDetailsTool = CreateXeroTool(
       content: [
         {
           type: "text" as const,
-          text: `Organisation Details:`,
+          text: `Organisation Details for ${resolved.tenant.tenantName}:`,
         },
         {
           type: "text" as const,

@@ -2,6 +2,10 @@ import { z } from "zod";
 import { listXeroInvoices } from "../../handlers/list-xero-invoices.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 import { formatLineItem } from "../../helpers/format-line-item.js";
+import {
+  resolveTenantForTool,
+  tenantIdArg,
+} from "../../helpers/tenant-arg.js";
 
 const ListInvoicesTool = CreateXeroTool(
   "list-invoices",
@@ -13,6 +17,7 @@ const ListInvoicesTool = CreateXeroTool(
   If they want the next page, call this tool again with the next page number \
   and the contact or invoice number if one was provided in the previous call.",
   {
+    ...tenantIdArg,
     page: z.number(),
     contactIds: z.array(z.string()).optional(),
     invoiceNumbers: z
@@ -20,8 +25,11 @@ const ListInvoicesTool = CreateXeroTool(
       .optional()
       .describe("If provided, invoice line items will also be returned"),
   },
-  async ({ page, contactIds, invoiceNumbers }) => {
-    const response = await listXeroInvoices(page, contactIds, invoiceNumbers);
+  async ({ tenantId, page, contactIds, invoiceNumbers }) => {
+    const resolved = await resolveTenantForTool(tenantId, "invoices");
+    if (!resolved.ok) return resolved.result;
+
+    const response = await listXeroInvoices(resolved.tenant.tenantId, page, contactIds, invoiceNumbers);
     if (response.error !== null) {
       return {
         content: [
@@ -40,7 +48,7 @@ const ListInvoicesTool = CreateXeroTool(
       content: [
         {
           type: "text" as const,
-          text: `Found ${invoices?.length || 0} invoices:`,
+          text: `Found ${invoices?.length || 0} invoices in ${resolved.tenant.tenantName}:`,
         },
         ...(invoices?.map((invoice) => ({
           type: "text" as const,

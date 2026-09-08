@@ -1,12 +1,21 @@
 import { listXeroTaxRates } from "../../handlers/list-xero-tax-rates.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
+import {
+  resolveTenantForTool,
+  tenantIdArg,
+} from "../../helpers/tenant-arg.js";
 
 const ListTaxRatesTool = CreateXeroTool(
   "list-tax-rates",
   "Lists all tax rates in Xero. Use this tool to get the tax rates to be used when creating invoices in Xero",
-  {},
-  async () => {
-    const response = await listXeroTaxRates();
+  {
+    ...tenantIdArg,
+  },
+  async ({ tenantId }) => {
+    const resolved = await resolveTenantForTool(tenantId, "tax rates");
+    if (!resolved.ok) return resolved.result;
+
+    const response = await listXeroTaxRates(resolved.tenant.tenantId);
     if (response.error !== null) {
       return {
         content: [
@@ -24,7 +33,7 @@ const ListTaxRatesTool = CreateXeroTool(
       content: [
         {
           type: "text" as const,
-          text: `Found ${taxRates?.length || 0} tax rates:`,
+          text: `Found ${taxRates?.length || 0} tax rates in ${resolved.tenant.tenantName}:`,
         },
         ...(taxRates?.map((taxRate) => ({
           type: "text" as const,

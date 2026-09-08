@@ -2,6 +2,10 @@ import { z } from "zod";
 import { listXeroPayments } from "../../handlers/list-xero-payments.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 import { Payment } from "xero-node";
+import {
+  resolveTenantForTool,
+  tenantIdArg,
+} from "../../helpers/tenant-arg.js";
 
 function paymentFormatter(payment: Payment): string {
   return [
@@ -47,14 +51,18 @@ const ListPaymentsTool = CreateXeroTool(
   Ask the user if they want to see payments for a specific invoice, contact, payment or reference before running.
   If many payments are returned, ask the user if they want to see the next page.`,
   {
+    ...tenantIdArg,
     page: z.number().default(1),
     invoiceNumber: z.string().optional(),
     invoiceId: z.string().optional(),
     paymentId: z.string().optional(),
     reference: z.string().optional(),
   },
-  async ({ page, invoiceNumber, invoiceId, paymentId, reference }) => {
-    const response = await listXeroPayments(page, {
+  async ({ tenantId, page, invoiceNumber, invoiceId, paymentId, reference }) => {
+    const resolved = await resolveTenantForTool(tenantId, "payments");
+    if (!resolved.ok) return resolved.result;
+
+    const response = await listXeroPayments(resolved.tenant.tenantId, page, {
       invoiceNumber,
       invoiceId,
       paymentId,
@@ -78,7 +86,7 @@ const ListPaymentsTool = CreateXeroTool(
       content: [
         {
           type: "text" as const,
-          text: `Found ${payments?.length || 0} payments:`,
+          text: `Found ${payments?.length || 0} payments in ${resolved.tenant.tenantName}:`,
         },
         ...(payments?.map((payment) => ({
           type: "text" as const,

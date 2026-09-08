@@ -2,11 +2,16 @@ import { z } from "zod";
 import { listXeroProfitAndLoss } from "../../handlers/list-xero-profit-and-loss.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 import { formatReportRows } from "../../helpers/format-report-rows.js";
+import {
+  resolveTenantForTool,
+  tenantIdArg,
+} from "../../helpers/tenant-arg.js";
 
 const ListProfitAndLossTool = CreateXeroTool(
   "list-profit-and-loss",
   "Lists profit and loss report in Xero. This provides a summary of revenue, expenses, and profit or loss over a specified period of time.",
   {
+    ...tenantIdArg,
     fromDate: z.string().optional().describe("Optional start date in YYYY-MM-DD format"),
     toDate: z.string().optional().describe("Optional end date in YYYY-MM-DD format"),
     periods: z.number().optional().describe("Optional number of periods to compare"),
@@ -15,7 +20,11 @@ const ListProfitAndLossTool = CreateXeroTool(
     paymentsOnly: z.boolean().optional().describe("Optional flag to include only accounts with payments"),
   },
   async (args) => {
+    const resolved = await resolveTenantForTool(args?.tenantId, "profit and loss report");
+    if (!resolved.ok) return resolved.result;
+
     const response = await listXeroProfitAndLoss(
+      resolved.tenant.tenantId,
       args?.fromDate,
       args?.toDate,
       args?.periods,
@@ -41,7 +50,7 @@ const ListProfitAndLossTool = CreateXeroTool(
       content: [
         {
           type: "text" as const,
-         text: `Profit and Loss Report: ${profitAndLossReport?.reportName ?? "Unnamed"}`,
+         text: `Profit and Loss Report: ${profitAndLossReport?.reportName ?? "Unnamed"} in ${resolved.tenant.tenantName}`,
        },
        {
          type: "text" as const,

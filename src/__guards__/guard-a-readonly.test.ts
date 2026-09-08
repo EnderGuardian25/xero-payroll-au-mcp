@@ -59,11 +59,15 @@ const SRC = resolve(HERE, "..");
 const REPO_ROOT = resolve(SRC, "..");
 
 /**
- * Spec FR4: the retained surface is exactly 18 accounting read tools. Asserted
- * as a literal so a tool arriving *and* being allowlisted in the same commit
- * still has to touch this line.
+ * The registered surface: 18 accounting read tools (001 spec FR4) plus
+ * `list-tenants` (002 spec FR1) = 19.
+ *
+ * Asserted as a literal so a tool arriving *and* being allowlisted in the same
+ * commit still has to touch this line. That is the whole point of the pin: it
+ * makes surface growth a third deliberate edit rather than something that rides
+ * along with the other two.
  */
-const EXPECTED_TOOL_COUNT = 18;
+const EXPECTED_TOOL_COUNT = 19;
 
 /*
  * `src/__guards__/` is excluded from the source scans below, and the reason is
