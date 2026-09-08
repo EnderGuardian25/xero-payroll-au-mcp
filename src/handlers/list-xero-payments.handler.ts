@@ -5,6 +5,7 @@ import { Payment } from "xero-node";
 import { getClientHeaders } from "../helpers/get-client-headers.js";
 
 async function getPayments(
+  tenantId: string,
   page: number = 1,
   {
     invoiceNumber,
@@ -41,7 +42,7 @@ async function getPayments(
     whereConditions.length > 0 ? whereConditions.join(" AND ") : undefined;
 
   const response = await xeroClient.accountingApi.getPayments(
-    xeroClient.tenantId,
+    tenantId,
     undefined, // ifModifiedSince
     where,
     "UpdatedDateUTC DESC", // order
@@ -57,6 +58,7 @@ async function getPayments(
  * List payments from Xero
  */
 export async function listXeroPayments(
+  tenantId: string,
   page: number = 1,
   {
     invoiceNumber,
@@ -71,7 +73,7 @@ export async function listXeroPayments(
   },
 ): Promise<XeroClientResponse<Payment[]>> {
   try {
-    const payments = await getPayments(page, {
+    const payments = await getPayments(tenantId, page, {
       invoiceNumber,
       invoiceId,
       paymentId,

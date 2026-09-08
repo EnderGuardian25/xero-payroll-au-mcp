@@ -4,11 +4,11 @@ import { formatError } from "../helpers/format-error.js";
 import { TaxRate } from "xero-node";
 import { getClientHeaders } from "../helpers/get-client-headers.js";
 
-async function getTaxRates(): Promise<TaxRate[]> {
+async function getTaxRates(tenantId: string): Promise<TaxRate[]> {
   await xeroClient.authenticate();
 
   const taxRates = await xeroClient.accountingApi.getTaxRates(
-    xeroClient.tenantId,
+    tenantId,
     undefined, // where
     undefined, // order
     getClientHeaders(),
@@ -19,11 +19,11 @@ async function getTaxRates(): Promise<TaxRate[]> {
 /**
  * List all tax rates from Xero
  */
-export async function listXeroTaxRates(): Promise<
+export async function listXeroTaxRates(tenantId: string): Promise<
   XeroClientResponse<TaxRate[]>
 > {
   try {
-    const taxRates = await getTaxRates();
+    const taxRates = await getTaxRates(tenantId);
 
     return {
       result: taxRates,

@@ -11,6 +11,7 @@ type TimeframeType = "MONTH" | "QUARTER" | "YEAR" | undefined;
  * Internal function to fetch profit and loss data from Xero
  */
 async function fetchProfitAndLoss(
+  tenantId: string,
   fromDate?: string,
   toDate?: string,
   periods?: number,
@@ -21,7 +22,7 @@ async function fetchProfitAndLoss(
   await xeroClient.authenticate();
 
   const response = await xeroClient.accountingApi.getReportProfitAndLoss(
-    xeroClient.tenantId,
+    tenantId,
     fromDate,
     toDate,
     periods,
@@ -52,6 +53,7 @@ async function fetchProfitAndLoss(
  * @param paymentsOnly Optional boolean to include only accounts with payments
  */
 export async function listXeroProfitAndLoss(
+  tenantId: string,
   fromDate?: string,
   toDate?: string,
   periods?: number,
@@ -61,6 +63,7 @@ export async function listXeroProfitAndLoss(
 ): Promise<XeroClientResponse<ReportWithRow>> {
   try {
     const profitAndLoss = await fetchProfitAndLoss(
+      tenantId,
       fromDate,
       toDate,
       periods,

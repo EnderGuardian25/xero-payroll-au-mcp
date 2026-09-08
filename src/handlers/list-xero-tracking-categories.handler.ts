@@ -5,12 +5,13 @@ import { XeroClientResponse } from "../types/tool-response.js";
 import { formatError } from "../helpers/format-error.js";
 
 async function getTrackingCategories(
+  tenantId: string,
   includeArchived?: boolean
 ): Promise<TrackingCategory[]> {
   await xeroClient.authenticate();
 
   const response = await xeroClient.accountingApi.getTrackingCategories(
-    xeroClient.tenantId, // xeroTenantId
+    tenantId, // xeroTenantId
     undefined, // where
     undefined, // order
     includeArchived, // includeArchived
@@ -21,10 +22,11 @@ async function getTrackingCategories(
 }
 
 export async function listXeroTrackingCategories(
+  tenantId: string,
   includeArchived?: boolean
 ): Promise<XeroClientResponse<TrackingCategory[]>> {
   try {
-    const trackingCategories = await getTrackingCategories(includeArchived);
+    const trackingCategories = await getTrackingCategories(tenantId, includeArchived);
 
     return {
       result: trackingCategories,
