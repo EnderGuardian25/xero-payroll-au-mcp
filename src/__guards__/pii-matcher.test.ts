@@ -209,4 +209,40 @@ describe("findPii does not flag values this surface must emit", () => {
     payload.self = payload;
     expect(findPii(payload)).toEqual([{ kind: "tfn", path: "TaxFileNumber" }]);
   });
+
+  /*
+   * Regression: an ISO date beside a bank cue was reported as an account number.
+   *
+   * Found by Guard B failing on a clean surface, not by review. `list-bank-transactions` renders
+   * "Bank Account: ..." and "Date: 2026-08-14" in the same text; because a candidate run absorbs
+   * single hyphens, that date normalises to the 8-digit 20260814, which sits inside the 6-10
+   * account-number band with a bank cue present.
+   *
+   * These four tests are a matched pair on purpose. Narrowing a PII matcher to silence a false
+   * positive is exactly how it drifts fail-open, so the exclusion is pinned in both directions: the
+   * date must not fire, and a genuine 8-digit account number under the same cue must still fire.
+   */
+  describe("date-shaped runs beside a bank cue", () => {
+    it("does not report an ISO date as a bank account number", () => {
+      expect(findPii("Bank Account: Cheque\nDate: 2026-08-14")).toEqual([]);
+      expect(findPii("Account Number listed\nDate: 14-08-2026")).toEqual([]);
+    });
+
+    it("still reports a real account number under the same cue", () => {
+      expect(findPii("Bank Account Number: 12345678")).toEqual([
+        { kind: "bank-account", path: "" },
+      ]);
+      expect(findPii({ bankAccountNumber: "12345678" })).toEqual([
+        { kind: "bank-account", path: "bankAccountNumber" },
+      ]);
+    });
+
+    it("still reports a TFN that happens to sit beside a date", () => {
+      // The exclusion must never reach the checksum rule. This is the assertion
+      // that would fail if someone moved the date check above the TFN check.
+      expect(findPii(`Date: 2026-08-14\nTFN ${TFN}`)).toEqual([
+        { kind: "tfn", path: "" },
+      ]);
+    });
+  });
 });
