@@ -1,0 +1,4 @@
+{"tier": "deep",
+ "domains": ["security", "ops"],
+ "rationale": "Establishes CI-enforced guards as hard blocks in the merge path for read-only and PII protection, and adds release machinery that gates all future changes to the tool surface.",
+ "signals": {"blast_radius": "~60 files of mostly inherited write tool deletions, plus 4 new files (two guards, allowlist, CI workflow); changes tool registry, test infrastructure, and build machinery", "unresolved": "No design-changing uncertainties; all open questions have recommendations or are tuning-level with no impact on file list", "irreversibility": "Fully git-revertible; write tool removal and guard addition break no existing dependencies since the server has no consumers yet"}}

@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "sig": "714127601 8095",
+  "tier": "deep",
+  "tier_source": "classifier",
+  "rationale": "Establishes CI-enforced guards as hard blocks in the merge path for read-only and PII protection, and adds release machinery that gates all future changes to the tool surface.",
+  "domains": ["security", "ops"],
+  "seats": [
+    {"role": "party-po", "model": "opus"},
+    {"role": "party-architect", "model": "opus"},
+    {"role": "party-ba", "model": "opus"},
+    {"role": "party-security", "model": "opus"},
+    {"role": "party-visionary", "model": "opus"}
+  ],
+  "dropped": []
+}
