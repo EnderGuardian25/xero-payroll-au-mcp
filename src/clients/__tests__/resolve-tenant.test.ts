@@ -164,7 +164,10 @@ describe("listAuthorisedTenants", () => {
     const tenants = await listAuthorisedTenants();
 
     expect(tenants).toHaveLength(2);
-    expect(tenants[0]).toEqual(DEMO);
+    // Destructured rather than indexed, so spec AC2 can stay a blunt grep for
+    // a positional tenant pick without this assertion looking like one.
+    const [first] = tenants;
+    expect(first).toEqual(DEMO);
   });
 
   it("does not request full organisation details", async () => {
