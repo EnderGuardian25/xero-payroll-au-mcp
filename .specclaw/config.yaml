@@ -21,7 +21,7 @@ models:
 #   worktree-per-change  — isolated worktree per change, enables parallel multi-change builds
 git:
   strategy: "branch-per-change"   # "branch-per-change" | "direct" | "worktree-per-change"
-  base_branch: ""                 # Branch to fork changes from and target PRs/merges at.
+  base_branch: "main"                 # Branch to fork changes from and target PRs/merges at.
                                   # Empty = auto-detect: origin/HEAD, then gh default branch,
                                   # then main/master. Set explicitly for release-branch flows.
   auto_commit: true
@@ -44,12 +44,12 @@ context:
 
 # Build settings
 build:
-  test_command: ""                 # Fast tier: unit/integration. e.g., "npm test", "pytest"
+  test_command: "npm test"                 # Fast tier: unit/integration. e.g., "npm test", "pytest"
   e2e_command: ""                  # Slow tier: browser/e2e. e.g., "npx playwright test"
                                    # Run separately from test_command, per verify.e2e below.
                                    # Absent or empty → no e2e tier, behaviour unchanged.
-  lint_command: ""                 # e.g., "npm run lint"
-  build_command: ""                # e.g., "npm run build"
+  lint_command: "npm run lint"                 # e.g., "npm run lint"
+  build_command: "npm run build"                # e.g., "npm run build"
   parallel_tasks: 3               # Max concurrent agent spawns
   timeout_seconds: 300             # Per-task timeout
 

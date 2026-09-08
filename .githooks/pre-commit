@@ -1,0 +1,7 @@
+#!/bin/sh
+# Enable with:  git config core.hooksPath .githooks
+#
+# Scans staged files under fixtures/ for a TFN, BSB or bank account number,
+# using the same matcher Guard B uses. See scripts/scan-staged-fixtures.mjs for
+# why this has to run before the commit object exists.
+exec node scripts/scan-staged-fixtures.mjs

@@ -1,0 +1,13 @@
+{
+  "change": "001-fork-strip-writes-guards",
+  "phase": "verify",
+  "branch": "specclaw/001-fork-strip-writes-guards",
+  "phases": {
+    "proposal": {"status":"approved","at":"2026-09-08T11:32:41Z"},
+    "spec": {"status":"done","at":"2026-09-08T11:36:50Z"},
+    "design": {"status":"done","at":"2026-09-08T11:38:08Z"},
+    "tasks": {"status":"done","at":"2026-09-08T11:39:11Z"},
+    "build": {"status":"in-progress","at":"2026-09-08T11:39:46Z"},
+    "verify": {"status":"passed","at":"2026-09-08T16:04:19Z","verdict":"PASS"}
+  }
+}
