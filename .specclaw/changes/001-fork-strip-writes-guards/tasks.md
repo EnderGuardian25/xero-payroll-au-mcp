@@ -2,7 +2,7 @@
 
 **Change:** 001-fork-strip-writes-guards
 **Created:** 2026-09-08
-**Total Tasks:** 14
+**Total Tasks:** 15
 
 ## Summary
 
@@ -20,7 +20,7 @@ committed without proof it can fail.
 
 ### Wave 1 — Land the fork and prove it builds
 
-- [~] `T1` — Merge upstream into this repo with both histories preserved
+- [x] `T1` — Merge upstream into this repo with both histories preserved
   - Files: whole tree, `.git/config`
   - Estimate: medium
   - Kind: migration
@@ -31,7 +31,7 @@ committed without proof it can fail.
     (rewritten in T14). **Any collision not on that list is a stop-and-decide — record it in the
     build log, do not guess.** Satisfies FR1 / AC1.
 
-- [ ] `T2` — Verify the inherited toolchain installs and passes on Node 24
+- [x] `T2` — Verify the inherited toolchain installs and passes on Node 24
   - Files: none (verification only)
   - Estimate: small
   - Kind: test
@@ -40,7 +40,7 @@ committed without proof it can fail.
     *before* anything is deleted, so a later failure is attributable to this change. Record the
     outcome. If `npm ci` fails on the inherited lockfile, resolve here — it blocks every later task.
 
-- [ ] `T3` — Add the tool inventory script and record the pre-strip inventory
+- [x] `T3` — Add the tool inventory script and record the pre-strip inventory
   - Files: `scripts/tool-inventory.mjs`, `package.json`
   - Estimate: small
   - Kind: impl
@@ -52,7 +52,7 @@ committed without proof it can fail.
 
 ### Wave 2 — Strip the surface and break the credential seam
 
-- [ ] `T4` — Delete all write tools and the NZ payroll tools, with their handlers
+- [x] `T4` — Delete all write tools and the NZ payroll tools, with their handlers
   - Files: `src/tools/{create,update,delete,get}/`, `src/tools/list/list-payroll-*.tool.ts`,
     `src/tools/list/list-timesheets.tool.ts`, `src/tools/list/index.ts`,
     `src/tools/tool-factory.ts`, `src/handlers/*` (writes + NZ payroll),
@@ -66,7 +66,7 @@ committed without proof it can fail.
     commit** (design NFR2/D4). `npm run build` must be green at the end. Satisfies FR2 / FR3 / FR4,
     AC2 / AC3 / AC4.
 
-- [ ] `T5` — Refactor the Xero client so registration needs no credentials
+- [x] `T5` — Refactor the Xero client so registration needs no credentials
   - Files: `src/clients/xero-client.ts`, all 18 retained `src/handlers/*`
   - Estimate: large
   - Kind: refactor
@@ -81,7 +81,7 @@ committed without proof it can fail.
     -u XERO_CLIENT_BEARER_TOKEN node -e "import('./dist/tools/tool-factory.js')"` must not throw.
     Satisfies FR5 / AC5.
 
-- [ ] `T6` — Re-run the inventory credential-free and record the post-strip surface
+- [x] `T6` — Re-run the inventory credential-free and record the post-strip surface
   - Files: none (verification only)
   - Estimate: small
   - Kind: test
@@ -91,7 +91,7 @@ committed without proof it can fail.
 
 ### Wave 3 — Shared primitives the guards stand on
 
-- [ ] `T7` — Build the shared PII matcher
+- [x] `T7` — Build the shared PII matcher
   - Files: `src/__guards__/pii-matcher.ts`, `src/__guards__/pii-matcher.test.ts`
   - Estimate: medium
   - Kind: impl
@@ -103,7 +103,7 @@ committed without proof it can fail.
     `NNN-NNN`; scan string values recursively. Its own tests must assert both directions: real
     synthetic TFNs caught, and ABN/USI/membership-ID/cents values **not** flagged.
 
-- [ ] `T8` — Build the headless registry enumerator and the fake Xero client
+- [x] `T8` — Build the headless registry enumerator and the fake Xero client
   - Files: `src/__guards__/tool-registry.ts`, `src/__guards__/fake-xero-client.ts`
   - Estimate: medium
   - Kind: impl
@@ -114,7 +114,7 @@ committed without proof it can fail.
     use, throws on any non-read method (FR6d), and can return payloads seeded with a synthetic TFN,
     BSB and account number (FR7c).
 
-- [ ] `T9` — Add the checked-in tool list
+- [x] `T9` — Add the checked-in tool list
   - Files: `src/__guards__/tool-allowlist.ts`
   - Estimate: small
   - Kind: config
@@ -125,7 +125,7 @@ committed without proof it can fail.
 
 ### Wave 4 — The guards, and proof they can fail
 
-- [ ] `T10` — Guard A: read-only by capability, over the whole registry
+- [x] `T10` — Guard A: read-only by capability, over the whole registry
   - Files: `src/__guards__/guard-a-readonly.test.ts`
   - Estimate: large
   - Kind: test
@@ -139,7 +139,7 @@ committed without proof it can fail.
     the reasoning from the brief as a comment: a 35-tool surface will eventually gain a tool nobody
     reviewed closely, and that is the one that leaks. Satisfies FR6 / AC11.
 
-- [ ] `T11` — Guard B: no TFN, BSB or account number, by field and by rendered output
+- [x] `T11` — Guard B: no TFN, BSB or account number, by field and by rendered output
   - Files: `src/__guards__/guard-b-no-pii.test.ts`
   - Estimate: large
   - Kind: test
@@ -152,7 +152,7 @@ committed without proof it can fail.
     matches none of it via `pii-matcher`; (d) matcher is imported, never reimplemented. Satisfies
     FR7 / AC9.
 
-- [ ] `T12` — Permanent negative controls for both guards
+- [x] `T12` — Permanent negative controls for both guards
   - Files: `src/__guards__/negative-controls.test.ts`,
     `src/__guards__/fixtures/violation-write-tool.ts`,
     `src/__guards__/fixtures/violation-direct-sdk-import.ts`,
@@ -168,7 +168,7 @@ committed without proof it can fail.
     each guard assertion in turn and confirm at least one negative control fails. Record the result
     in the build log; revert every temporary edit. Satisfies FR8 / AC7 / AC8 / AC10.
 
-- [ ] `T13` — Guard C: no payload logging
+- [x] `T13` — Guard C: no payload logging
   - Files: `src/__guards__/guard-c-no-payload-logs.test.ts`
   - Estimate: medium
   - Kind: test
@@ -181,9 +181,31 @@ committed without proof it can fail.
     only falsifiable form of the prohibition: "never log a payload" has no syntactic target, "log
     exactly tool name, tenant id and duration" does. Satisfies FR9 / AC12.
 
+- [x] `T15` — Hand-map report rows, closing the widest PII egress on the retained surface
+  - Files: `src/helpers/format-report-rows.ts`, `src/tools/list/list-trial-balance.tool.ts`,
+    `src/tools/list/list-profit-and-loss.tool.ts`,
+    `src/tools/list/list-report-balance-sheet.tool.ts`,
+    `src/tools/list/list-aged-payables-by-contact.tool.ts`,
+    `src/tools/list/list-aged-receivables-by-contact.tool.ts`
+  - Estimate: medium
+  - Kind: impl
+  - Depends: T8
+  - Notes: **Discovered during T8, not in the original plan, and proven by probe.** Five retained
+    tools render report output as `JSON.stringify(report.rows, null, 2)`. A probe planting a
+    checksum-valid TFN and a BSB into report rows confirmed **all five leak both values verbatim**
+    to the caller. That is a direct violation of `CLAUDE.md` hard rule 2 — "Every tool returns a
+    hand-defined shape; raw Xero response objects never pass through to the caller" — sitting on the
+    surface this change retains. Guard B passing over it would make the guard ceremonial on the
+    widest egress in the repo, which is the exact failure mode `spec.md` names as the real risk.
+    Fix: one shared `formatReportRows()` that hand-maps the recursive row structure to a declared
+    shape — `rowType`, `title`, `cells: string[]`, nested `rows` — dropping `Attributes` and
+    anything else Xero may add later, then use it in all five tools. Re-run the probe afterwards and
+    confirm the planted values no longer render. Satisfies FR7b properly rather than by a
+    technicality about the word "whole".
+
 ### Wave 5 — CI, fixture policy, and the paper trail
 
-- [ ] `T14` — Wire CI, the fixture policy, the pre-commit hook, and update the docs
+- [~] `T14` — Wire CI, the fixture policy, the pre-commit hook, and update the docs
   - Files: `.github/workflows/ci.yml`, `.githooks/pre-commit`, `.gitignore`, `package.json`,
     `.specclaw/config.yaml`, `README.md`, `HANDOFF.md`
   - Estimate: medium

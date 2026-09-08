@@ -217,3 +217,21 @@ Each criterion must pass for the change to be considered complete.
 - Deferred to the first change holding a live client: the runtime response-egress filter. After 001,
   rule 2 is guarded against field reads, response passthrough and rendered-output leakage on the
   fake-client path; it is not guarded against a live response field no test exercised.
+
+### Amendment during build — FR7b was too narrow (T15)
+
+FR7b originally read "no tool serialises a whole Xero response or response `.body`". Five retained
+report tools rendered `JSON.stringify(report.rows, null, 2)`, which passes that wording — `.rows` is
+a field, not the whole body — while violating `CLAUDE.md` rule 2 outright. A probe planting a
+checksum-valid TFN and a BSB confirmed all five rendered both values verbatim.
+
+FR7b is therefore to be read as: **no unreviewed Xero-derived value may reach a tool's output.** Task
+T15 closed it with a hand-mapped report row shape. AC-equivalent evidence: the probe went 5/5 → 0/5
+for values planted in `cell.attributes` and in undeclared row fields.
+
+**Known residual risk, stated rather than papered over.** A PII value that Xero places in a report
+cell's *text* still reaches the caller, and the mapper deliberately does not redact it — that value
+is inside the data the caller asked Xero for, and deciding a digit run in financial report text is
+PII rather than an invoice number is a redaction judgement, not a shape judgement. It belongs to the
+runtime egress filter deferred in design D8. Recorded here so the coverage claim after 001 stays
+accurate.

@@ -1,243 +1,121 @@
-# Xero MCP Server
+# xero-payroll-au-mcp
 
-This is a Model Context Protocol (MCP) server implementation for Xero. It provides a bridge between the MCP protocol and Xero's API, allowing for standardized access to Xero's accounting and business features.
+A **read-only** MCP server for Xero, forked from
+[`XeroAPI/xero-mcp-server`](https://github.com/XeroAPI/xero-mcp-server) (MIT), being built toward
+**Australian Payroll** — pay runs, payslips and superannuation lines.
 
-## Features
+> **Status: foundation only.** This repo currently exposes 18 accounting read tools and no Payroll
+> AU tools. The guards that make the rest of the work safe are in place; the AU surface is not built
+> yet. See [`HANDOFF.md`](HANDOFF.md) for where things stand.
 
-- Xero OAuth2 authentication with custom connections
-- Contact management
-- Chart of Accounts management
-- Invoice creation and management
-- MCP protocol compliance
+## Why this fork exists
 
-## Prerequisites
+The official Xero MCP server cannot reach Australian payroll at all. Its payroll tools cover
+employees, leave and timesheets, for NZ and UK only — there is no path in it to a pay run, a
+payslip, a superannuation line, a super fund, a membership or STP.
 
-- Node.js (v18 or higher)
-- npm or pnpm
-- A Xero developer account with API credentials
+That is not an inference from the docs. Verified against upstream at v0.0.16:
 
-## Docs and Links
+| Evidence | Finding |
+|---|---|
+| Xero API call sites in upstream | `accountingApi` ×45, `payrollNZApi` ×14, **`payrollAuApi` ×0** |
+| `src/types/payroll-au-types.ts` | A 3-line file **nothing imports** |
 
-- [Xero Public API Documentation](https://developer.xero.com/documentation/api/)
-- [Xero API Explorer](https://api-explorer.xero.com/)
-- [Xero OpenAPI Specs](https://github.com/XeroAPI/Xero-OpenAPI)
-- [Xero-Node Public API SDK Docs](https://xeroapi.github.io/xero-node/accounting)
-- [Developer Documentation](https://developer.xero.com/)
+Australia's Payday Super regime makes per-employee superannuation data the thing every compliance
+tool needs to read, and `SuperannuationLines[]` on a payslip — with its `ContributionType`, so an
+SGC line can be told from salary sacrifice — is the reason this repo exists.
 
-## Setup
+## What it will and will not do
 
-### Create a Xero Account
+**Read-only, permanently.** Not "read-only by convention" — the upstream write tools were deleted,
+and CI fails the build if a tool that can mutate ever reaches the registry again.
 
-If you don't already have a Xero account and organisation already, can create one by signing up [here](https://www.xero.com/au/signup/) using the free trial.
+**No tax file numbers, BSBs or bank account numbers.** Live Xero payroll payloads carry all three.
+Every tool returns a hand-defined shape, and CI fails the build if a denied field is read or an
+unreviewed Xero-derived value reaches a caller.
 
-We recommend using a Demo Company to start with because it comes with some pre-loaded sample data. Once you are logged in, switch to it by using the top left-hand dropdown and selecting "Demo Company". You can reset the data on a Demo Company, or change the country, at any time by using the top left-hand dropdown and navigating to [My Xero](https://my.xero.com).
+**No compliance math.** This server reports what Xero says. Calculating shortfalls, deadlines or
+penalties is a consumer's job, deliberately.
 
-NOTE: To use Payroll-specific queries, the region should be either NZ or UK.
+Three things Xero itself does not expose, so this server cannot either — documented so nobody spends
+a week looking: **STP filing status** has no API; **Auto Super batch status** is UI-only, so nothing
+here can confirm a contribution reached a fund; and there are **no payroll webhooks**, so
+incremental polling with `If-Modified-Since` is the pattern.
 
-### Authentication
+## The guards
 
-There are 2 modes of authentication supported in the Xero MCP server:
+These are the point of the fork, and they run over the **entire registered surface** on every CI
+run — not per tool, and not as a review checklist. A 35-tool surface will eventually gain a tool
+nobody reviewed closely, and that is precisely the one that leaks.
 
-#### 1. Custom Connections
+| Guard | Asserts |
+|---|---|
+| **A — read-only** | Write tool directories absent; no mutating Xero API call site; no handler importing the SDK directly; every registered tool, driven against a client that throws on any non-read call, reaches only reads; the registry and the checked-in tool list match exactly, both ways, and the list is non-empty |
+| **B — no PII** | No source file reads a denied field (`taxFileNumber`, `bsb`, `accountNumber`, …) by dot *or* bracket access; no tool serialises an unreviewed Xero-derived value; every tool, driven against payloads carrying a checksum-valid TFN, a BSB and an account number, renders none of them |
+| **C — no payload logs** | No response object or client-reachable value is passed to a log call. Phrased as a positive allowlist, because "never log a body" names nothing you can check while "log only tool name, tenant id and duration" does |
 
-This is a better choice for testing and development which allows you to specify client id and secrets for a specific organisation.
-It is also the recommended approach if you are integrating this into 3rd party MCP clients such as Claude Desktop.
+Two design notes worth knowing before you touch them:
 
-##### Configuring your Xero Developer account
+- **The tool list is a tripwire, not proof.** A name records only that somebody typed a string. An
+  allowlisted tool whose handler is later edited to `POST` would stay green forever on a name check,
+  so read-only is proven by capability instead — and appending to that list is explicitly *not* an
+  approval step.
+- **Each guard has a permanent negative control.** Four checked-in violations are asserted to make
+  the guards fail, on every run. A guard demonstrated once at merge and trusted forever is
+  indistinguishable, in CI output, from a guard that has silently stopped seeing anything. Both of
+  those risks turned out to be real during the initial build.
 
-Set up a Custom Connection following these instructions: https://developer.xero.com/documentation/guides/oauth2/custom-connections/
+Run them alone with `npm run guards`.
 
-##### Required Scopes
+## Requirements a caller must satisfy
 
-Custom connections require different scopes depending on when they were created. **All scopes in the relevant list must be added to your custom connection:**
+**Australian Payroll requires granular scopes.** Connections created on or after 29 April 2026 use
+them, and `accounting.journals.read` does not exist for such a connection — so `GET /Journals` is
+unavailable and Superannuation Payable has to be read through `BankTransactions`.
 
-| Custom Connection Created | Required Scopes |
-|---------------------------|-----------------|
-| Before Apr 29, 2026 | [SCOPES_V1](src/clients/xero-client.ts#L82-L90) (bundled permissions) |
-| From Apr 29, 2026 | [SCOPES_V2](src/clients/xero-client.ts#L93-L112) (granular permissions) |
+**Whoever authorises the connection needs Payroll Admin** in that Xero organisation, and there is no
+API to create a Custom Connection — it is a manual step in Xero's developer portal.
 
-> **Note:** The MCP server automatically tries V1 scopes first and falls back to V2 if needed.
-> 
-> You can override these by setting the `XERO_SCOPES` environment variable to a space-separated list of scopes.
+## Auth
 
-##### Integrating the MCP server with Claude Desktop
+Two modes, inherited from upstream. Credentials come from the process environment; nothing is stored.
 
-To add the MCP server to Claude go to Settings > Developer > Edit config and add the following to your claude_desktop_config.json file:
+| Mode | Env | Shape |
+|---|---|---|
+| Bearer token | `XERO_CLIENT_BEARER_TOKEN` | Caller does the OAuth and passes a token in. **Recommended** — the server holds no credentials and can be shared. Takes precedence if both are set |
+| Custom Connection | `XERO_CLIENT_ID` + `XERO_CLIENT_SECRET` (+ optional `XERO_SCOPES`) | `client_credentials`, one Xero organisation per connection. A paid Xero add-on |
 
-```json
-{
-  "mcpServers": {
-    "xero": {
-      "command": "npx",
-      "args": ["-y", "@xeroapi/xero-mcp-server@latest"],
-      "env": {
-        "XERO_CLIENT_ID": "your_client_id_here",
-        "XERO_CLIENT_SECRET": "your_client_secret_here",
-        "XERO_SCOPES": "accounting.invoices accounting.contacts accounting.settings"
-      }
-    }
-  }
-}
-```
+The client is constructed lazily, on first use. That is not a micro-optimisation: it is what lets CI
+enumerate the tool registry with **no** credentials present, and CI deliberately holds none — so a
+test that quietly depended on a live credential could not pass there by accident.
 
-The `XERO_SCOPES` variable is optional. If omitted, the default scopes listed above will be used.
-
-NOTE: If you are using [Node Version Manager](https://github.com/nvm-sh/nvm) `"command": "npx"` section change it to be the full path to the executable, ie: `your_home_directory/.nvm/versions/node/v22.14.0/bin/npx` on Mac / Linux or `"your_home_directory\\.nvm\\versions\\node\\v22.14.0\\bin\\npx"` on Windows
-
-#### 2. Bearer Token
-
-This is a better choice if you are to support multiple Xero accounts at runtime and allow the MCP client to execute an auth flow (such as PKCE) as required.
-In this case, use the following configuration:
-
-```json
-{
-  "mcpServers": {
-    "xero": {
-      "command": "npx",
-      "args": ["-y", "@xeroapi/xero-mcp-server@latest"],
-      "env": {
-        "XERO_CLIENT_BEARER_TOKEN": "your_bearer_token"
-      }
-    }
-  }
-}
-```
-
-NOTE: The `XERO_CLIENT_BEARER_TOKEN` will take precedence over the `XERO_CLIENT_ID` if defined.
-
-##### Required Scopes for Bearer Token
-
-When obtaining a bearer token, you must request the appropriate scopes. The scopes you request should be:
-
-> **Note:** Some scopes are being deprecated in favour of more granular scopes. See the [Xero OAuth 2.0 Scopes documentation](https://developer.xero.com/documentation/guides/oauth2/scopes/) for details on deprecation timelines.
-
-```
-accounting.transactions (Deprecated)
-accounting.transactions.read (Deprecated)
-accounting.invoices
-accounting.invoices.read
-accounting.payments
-accounting.payments.read
-accounting.banktransactions
-accounting.banktransactions.read
-accounting.manualjournals
-accounting.manualjournals.read
-accounting.reports.read (Deprecated)
-accounting.reports.aged.read
-accounting.reports.balancesheet.read
-accounting.reports.profitandloss.read
-accounting.reports.trialbalance.read
-accounting.contacts 
-accounting.settings 
-payroll.settings 
-payroll.employees 
-payroll.timesheets
-```
-
-
-### Available MCP Commands
-
-- `list-accounts`: Retrieve a list of accounts
-- `list-contacts`: Retrieve a list of contacts from Xero
-- `list-credit-notes`: Retrieve a list of credit notes
-- `list-invoices`: Retrieve a list of invoices
-- `list-items`: Retrieve a list of items
-- `list-manual-journals`: Retrieve a list of manual journals
-- `list-organisation-details`: Retrieve details about an organisation
-- `list-profit-and-loss`: Retrieve a profit and loss report
-- `list-quotes`: Retrieve a list of quotes
-- `list-tax-rates`: Retrieve a list of tax rates
-- `list-payments`: Retrieve a list of payments
-- `list-trial-balance`: Retrieve a trial balance report
-- `list-bank-transactions`: Retrieve a list of bank account transactions
-- `list-payroll-employees`: Retrieve a list of Payroll Employees
-- `list-report-balance-sheet`: Retrieve a balance sheet report
-- `list-payroll-employee-leave`: Retrieve a Payroll Employee's leave records
-- `list-payroll-employee-leave-balances`: Retrieve a Payroll Employee's leave balances
-- `list-payroll-employee-leave-types`: Retrieve a list of Payroll leave types
-- `list-payroll-leave-periods`: Retrieve a list of a Payroll Employee's leave periods
-- `list-payroll-leave-types`: Retrieve a list of all available leave types in Xero Payroll
-- `list-timesheets`: Retrieve a list of Payroll Timesheets
-- `list-aged-receivables-by-contact`: Retrieves aged receivables for a contact
-- `list-aged-payables-by-contact`: Retrieves aged payables for a contact
-- `list-contact-groups`: Retrieve a list of contact groups
-- `list-tracking-categories`: Retrieve a list of tracking categories
-- `create-bank-transaction`: Create a new bank transaction
-- `create-contact`: Create a new contact
-- `create-credit-note`: Create a new credit note
-- `create-invoice`: Create a new invoice
-- `create-item`: Create a new item
-- `create-manual-journal`: Create a new manual journal
-- `create-payment`: Create a new payment
-- `create-quote`: Create a new quote
-- `create-payroll-timesheet`: Create a new Payroll Timesheet
-- `create-tracking-category`: Create a new tracking category
-- `create-tracking-option`: Create a new tracking option
-- `update-bank-transaction`: Update an existing bank transaction
-- `update-contact`: Update an existing contact
-- `update-invoice`: Update an existing draft invoice
-- `update-item`: Update an existing item
-- `update-manual-journal`: Update an existing manual journal
-- `update-quote`: Update an existing draft quote
-- `update-credit-note`: Update an existing draft credit note
-- `update-tracking-category`: Update an existing tracking category
-- `update-tracking-options`: Update tracking options
-- `update-payroll-timesheet-line`: Update a line on an existing Payroll Timesheet
-- `approve-payroll-timesheet`: Approve a Payroll Timesheet
-- `revert-payroll-timesheet`: Revert an approved Payroll Timesheet
-- `add-payroll-timesheet-line`: Add new line on an existing Payroll Timesheet
-- `delete-payroll-timesheet`: Delete an existing Payroll Timesheet
-- `get-payroll-timesheet`: Retrieve an existing Payroll Timesheet
-
-For detailed API documentation, please refer to the [MCP Protocol Specification](https://modelcontextprotocol.io/).
-
-## For Developers
-
-### Installation
+## Development
 
 ```bash
-# Using npm
-npm install
-
-# Using pnpm
-pnpm install
-```
-
-### Run a build
-
-```bash
-# Using npm
+npm ci
 npm run build
-
-# Using pnpm
-pnpm build
+npm test              # includes all three guards and the negative controls
+npm run guards        # guards only
+npm run inventory     # print the registered tool surface
 ```
 
-### Integrating with Claude Desktop
+Enable the pre-commit fixture scan once per clone:
 
-To link your Xero MCP server in development to Claude Desktop go to Settings > Developer > Edit config and add the following to your `claude_desktop_config.json` file:
-
-NOTE: For Windows ensure the `args` path escapes the `\` between folders ie. `"C:\\projects\xero-mcp-server\\dist\\index.js"`
-
-```json
-{
-  "mcpServers": {
-    "xero": {
-      "command": "node",
-      "args": ["insert-your-file-path-here/xero-mcp-server/dist/index.js"],
-      "env": {
-        "XERO_CLIENT_ID": "your_client_id_here",
-        "XERO_CLIENT_SECRET": "your_client_secret_here"
-      }
-    }
-  }
-}
+```bash
+git config core.hooksPath .githooks
 ```
 
-## License
+It refuses a staged file under `fixtures/` containing a TFN, BSB or account number, using the same
+matcher Guard B uses. It runs at commit time rather than in CI on purpose: PII in a git history can
+only be remedied by rewriting that history, and this fork's whole structure is built on keeping
+upstream mergeable. Recorded raw Xero responses belong in `fixtures/raw/`, which is git-ignored.
 
-MIT
+## Relationship to upstream
 
-## Security
+`upstream` stays configured and history is preserved on both sides, so fixes remain mergeable.
+Divergence is kept in added files where possible. Note that a merge which resurrects a write tool
+will be caught by Guard A rather than by a reviewer's attention.
 
-Please do not commit your `.env` file or any sensitive credentials to version control (it is included in `.gitignore` as a safe default.)
+## Licence
+
+MIT, inherited from upstream. See [`LICENSE`](LICENSE).

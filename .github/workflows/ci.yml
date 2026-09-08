@@ -1,0 +1,67 @@
+name: CI
+
+# The guards are the whole value proposition of this fork, so they run on every
+# push and every pull request. A guard that only runs when someone remembers to
+# run it is not a guard (CLAUDE.md rule 3).
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+# Least privilege. This workflow reads code and runs tests; it publishes
+# nothing and needs no write access.
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    # No `env:` block, and deliberately no Xero secrets anywhere in this file.
+    #
+    # That is a requirement, not an oversight (spec FR11 / AC14). Registration
+    # is a pure function of nothing after change 001, so the whole suite —
+    # including all three guards and the negative controls — must pass with no
+    # XERO_CLIENT_ID, XERO_CLIENT_SECRET or XERO_CLIENT_BEARER_TOKEN present.
+    # Withholding them means a test that quietly depends on a live credential
+    # cannot pass here by accident, and it keeps CI incapable of touching a real
+    # organisation.
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Assert no Xero credentials are present
+        # Fails loudly if a credential is ever introduced into this job. The
+        # guards are only trustworthy while they run headless.
+        run: |
+          if env | grep -q '^XERO_'; then
+            echo "A XERO_* variable is set in CI. The guards must run headless."
+            exit 1
+          fi
+          echo "No XERO_* variables present."
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Test, guards and negative controls
+        # `npm test` runs vitest over src/**/*.test.ts, which includes Guard A
+        # (read-only by capability), Guard B (no TFN/BSB/account number),
+        # Guard C (no payload logging) and the permanent negative controls that
+        # prove each guard can still fail.
+        run: npm test
+
+      - name: Registered tool inventory
+        # Printed into the log on every run so a change to the tool surface is
+        # visible in CI output, not only in a diff someone has to open.
+        run: npm run inventory

@@ -22,7 +22,9 @@
     "test:watch": "vitest",
     "lint:fix": "eslint --fix",
     "lint": "eslint .",
-    "inventory": "node scripts/tool-inventory.mjs"
+    "inventory": "node scripts/tool-inventory.mjs",
+    "fixtures:scan": "node scripts/scan-staged-fixtures.mjs",
+    "guards": "vitest run src/__guards__"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.23.4",
