@@ -14,6 +14,7 @@
 | Tasks | ✅ Done |  |
 | Build | 🔨 In-progress |  |
 | Verify | ✅ Passed | PASS |
+| Archived | ✅ Done |  |
 
 ## Task Progress
 
