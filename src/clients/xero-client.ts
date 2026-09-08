@@ -11,16 +11,9 @@ import { ensureError } from "../helpers/ensure-error.js";
 
 dotenv.config();
 
-const client_id = process.env.XERO_CLIENT_ID;
-const client_secret = process.env.XERO_CLIENT_SECRET;
-const bearer_token = process.env.XERO_CLIENT_BEARER_TOKEN;
 const grant_type = "client_credentials";
 
-if (!bearer_token && (!client_id || !client_secret)) {
-  throw Error("Environment Variables not set - please check your .env file");
-}
-
-abstract class MCPXeroClient extends XeroClient {
+export abstract class MCPXeroClient extends XeroClient {
   public tenantId: string;
   private shortCode: string;
 
@@ -220,12 +213,99 @@ class BearerTokenXeroClient extends MCPXeroClient {
   }
 }
 
-export const xeroClient = bearer_token
-  ? new BearerTokenXeroClient({
-      bearerToken: bearer_token,
-    })
-  : new CustomConnectionsXeroClient({
-      clientId: client_id!,
-      clientSecret: client_secret!,
+/*
+ * Lazy client construction.
+ *
+ * Upstream read XERO_CLIENT_ID / XERO_CLIENT_SECRET / XERO_CLIENT_BEARER_TOKEN
+ * at module scope, threw there when none were set, and exported an eagerly
+ * constructed singleton. Every handler imports this module and every tool
+ * imports a handler, so `import { ToolFactory }` threw unless credentials were
+ * present — which made it impossible to enumerate the tool registry in CI.
+ *
+ * That matters more than convenience. Both guards assert properties over the
+ * whole registered surface, and every one of those assertions is trivially
+ * true of an empty set. A guard that cannot boot is either skipped or passes
+ * on zero tools, and in CI output that is indistinguishable from a guard that
+ * passed on a clean surface. See spec FR5 and FR6f/FR6g.
+ *
+ * So construction moves to first use and the missing-credential error is
+ * raised there. Credentials are still read from the process environment only —
+ * nothing is stored, per CLAUDE.md's "prefer to hold nothing".
+ *
+ * The `xeroClient` export keeps its name and behaves as before on first
+ * property access, so none of the 18 retained handlers changed. Keeping
+ * divergence out of inherited files is a repo convention, and it also keeps
+ * this commit reviewable.
+ */
+
+let instance: MCPXeroClient | null = null;
+
+/**
+ * Returns the process-wide Xero client, constructing it on first call.
+ *
+ * Throws if no credentials are configured. Bearer token takes precedence over
+ * client credentials, exactly as upstream behaved — this change moves *when*
+ * the client is built, not *how*.
+ */
+export function getXeroClient(): MCPXeroClient {
+  if (instance) return instance;
+
+  const clientId = process.env.XERO_CLIENT_ID;
+  const clientSecret = process.env.XERO_CLIENT_SECRET;
+  const bearerToken = process.env.XERO_CLIENT_BEARER_TOKEN;
+
+  if (bearerToken) {
+    instance = new BearerTokenXeroClient({ bearerToken });
+  } else if (clientId && clientSecret) {
+    instance = new CustomConnectionsXeroClient({
+      clientId,
+      clientSecret,
       grantType: grant_type,
     });
+  } else {
+    throw Error("Environment Variables not set - please check your .env file");
+  }
+
+  return instance;
+}
+
+/**
+ * Replaces the client for the duration of a test, and returns a restore
+ * function.
+ *
+ * This is what lets the guards drive every registered tool against a fake
+ * client that throws on any non-read call, and against payloads seeded with
+ * synthetic PII — the capability evidence behind Guard A and the rendered
+ * output check behind Guard B (spec FR6d, FR7c). Without an injection point
+ * those guards could only inspect source text.
+ */
+export function setXeroClientForTesting(
+  fake: MCPXeroClient | null,
+): () => void {
+  const previous = instance;
+  instance = fake;
+  return () => {
+    instance = previous;
+  };
+}
+
+/**
+ * The client, as inherited handlers consume it.
+ *
+ * A proxy rather than a value, so that importing this module never constructs
+ * anything and never throws. Property access forwards to `getXeroClient()`,
+ * which is where a missing credential surfaces.
+ */
+export const xeroClient: MCPXeroClient = new Proxy({} as MCPXeroClient, {
+  get(_target, property) {
+    const client = getXeroClient();
+    const value = Reflect.get(client, property, client);
+    return typeof value === "function" ? value.bind(client) : value;
+  },
+  set(_target, property, value) {
+    return Reflect.set(getXeroClient(), property, value);
+  },
+  has(_target, property) {
+    return Reflect.has(getXeroClient(), property);
+  },
+});
