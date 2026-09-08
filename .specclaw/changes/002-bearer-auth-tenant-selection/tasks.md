@@ -98,7 +98,7 @@ final so its negative controls exercise the real 19-tool registry.
 
 ### Wave 4 — The runtime egress filter and its guards
 
-- [~] `T7` — Build the egress filter and wire it into the single funnel
+- [x] `T7` — Build the egress filter and wire it into the single funnel
   - Files: `src/security/egress-filter.ts`, `src/helpers/create-xero-tool.ts`
   - Estimate: medium
   - Kind: impl
@@ -111,7 +111,7 @@ final so its negative controls exercise the real 19-tool registry.
     through, so the whole surface and every future Payroll AU tool inherit it from one file
     (design D4). Closes `HANDOFF.md` open decision 6.
 
-- [ ] `T8` — Guard the filter, permanently
+- [~] `T8` — Guard the filter, permanently
   - Files: `src/__guards__/egress-filter.test.ts`,
     `src/__guards__/fixtures/violation-egress-tfn.ts`
   - Estimate: medium
