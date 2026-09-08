@@ -205,7 +205,7 @@ committed without proof it can fail.
 
 ### Wave 5 — CI, fixture policy, and the paper trail
 
-- [~] `T14` — Wire CI, the fixture policy, the pre-commit hook, and update the docs
+- [x] `T14` — Wire CI, the fixture policy, the pre-commit hook, and update the docs
   - Files: `.github/workflows/ci.yml`, `.githooks/pre-commit`, `.gitignore`, `package.json`,
     `.specclaw/config.yaml`, `README.md`, `HANDOFF.md`
   - Estimate: medium
