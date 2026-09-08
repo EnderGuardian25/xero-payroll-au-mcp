@@ -111,7 +111,7 @@ final so its negative controls exercise the real 19-tool registry.
     through, so the whole surface and every future Payroll AU tool inherit it from one file
     (design D4). Closes `HANDOFF.md` open decision 6.
 
-- [~] `T8` — Guard the filter, permanently
+- [x] `T8` — Guard the filter, permanently
   - Files: `src/__guards__/egress-filter.test.ts`,
     `src/__guards__/fixtures/violation-egress-tfn.ts`
   - Estimate: medium
