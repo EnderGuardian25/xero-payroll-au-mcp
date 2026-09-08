@@ -21,7 +21,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "lint:fix": "eslint --fix",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "inventory": "node scripts/tool-inventory.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.23.4",
