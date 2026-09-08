@@ -1,11 +1,12 @@
 {
   "change": "002-bearer-auth-tenant-selection",
-  "phase": "tasks",
+  "phase": "verify",
   "branch": "",
   "phases": {
     "proposal": {"status":"approved","at":"2026-09-08T20:40:53Z"},
     "spec": {"status":"done","at":"2026-09-08T20:42:32Z"},
     "design": {"status":"done","at":"2026-09-08T20:44:26Z"},
-    "tasks": {"status":"done","at":"2026-09-08T20:44:28Z"}
+    "tasks": {"status":"done","at":"2026-09-08T20:44:28Z"},
+    "verify": {"status":"passed","at":"2026-09-08T21:21:38Z","verdict":"PASS"}
   }
 }

@@ -137,7 +137,7 @@ final so its negative controls exercise the real 19-tool registry.
     (NFR1 / AC15). Report a busy loopback port instead of hanging (spec Edge Cases). Do **not** run
     it against Xero — consent needs a human browser, and the smoke test is the user's to perform.
 
-- [~] `T10` — Docs, handoff, and final gates
+- [x] `T10` — Docs, handoff, and final gates
   - Files: `README.md`, `HANDOFF.md`
   - Estimate: medium
   - Kind: docs
