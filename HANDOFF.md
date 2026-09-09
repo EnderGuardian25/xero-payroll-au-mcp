@@ -4,35 +4,41 @@
 > rewritten every session and are true as of the date below. The session log is append-only — never
 > edit a past entry.
 
-**As at:** 2026-09-08 · **Owner:** Damian De Cruz
+**As at:** 2026-09-09 · **Owner:** Damian De Cruz
 
 ---
 
 ## Current state
 
-**Foundation built; no Payroll AU tools yet.** Change 001 is complete and awaiting merge. The repo
-is now a working fork of `XeroAPI/xero-mcp-server` with **18 accounting read tools** and three
-build-failing guards over the whole registered surface.
+**Foundation and auth done; no Payroll AU tools yet.** 001 is merged and tagged `v0.1.0-guards`.
+002 is complete and awaiting merge.
 
-Registered surface went **51 tools -> 18**, generated from the registry rather than counted by hand:
+The server now exposes **19 read tools** — 18 accounting reads plus `list-tenants` — behind four
+build-failing guards, and it can be pointed at a real Xero organisation.
 
-- 25 write tools deleted (create/update/delete directories, plus their handlers)
-- 8 NZ payroll tools deleted — every one reached `payrollNZApi` and none reached the AU API, so none
-  could answer an Australian question. **This overrode the build brief's "keep the reads, strip the
-  writes"**, on evidence, and is recorded as design decision D4
-- 18 accounting reads retained, including `list-bank-transactions` for Superannuation Payable
+**What 002 changed, and why it mattered more than "add auth":**
 
-**Decided at creation, 2026-09-08, and still true:**
+- **The server no longer guesses which organisation it reads.** It took whichever connection the SDK
+  sorted first — which moves as organisations are updated — and said nothing about which one it had
+  used. Every tool now takes an optional `tenantId`, errors naming the candidates when several are
+  authorised, and names the organisation in its output. That defect had **two copies**, in
+  `updateTenants()` and in the custom-connections token exchange; a grep for one would have missed
+  the other.
+- **The tenant is threaded as an argument, never stored.** `tenantId` was a public mutable field on
+  a process-wide singleton, so setting it per call would have raced between concurrent calls, and
+  the wrong organisation's payroll reads exactly like a correct answer.
+- **A runtime PII egress filter** sits at `CreateXeroTool`, the factory every tool is built through,
+  so the whole surface and every future Payroll AU tool is covered from one file. **This closes open
+  decision 6.**
+- **A PKCE mint helper** (`npm run mint-token`) — no client secret, writes nothing to disk.
 
-- Fork rather than start fresh; keep `upstream` configured and history preserved on both sides
-- Bearer-token auth, holding no credentials at rest
-- Read-only and no-PII guards run over the whole surface in CI and fail the build
-- No compliance math here. This server reports what Xero says
+**Decided this session:**
 
-**Who this is for:** whoever comes second. The Payday Super Reconciler was the expected first
-consumer and deliberately stopped being one on 2026-09-08 — it reads Xero through a typed .NET
-client, because MCP between two components of one .NET solution is a serialization boundary bought
-for nothing. **That is why this repo is standalone, and there is no committed consumer today.**
+- **A PKCE "Mobile or desktop" app, not a Custom Connection.** Free, so **open decision 5 is moot**.
+  No client secret exists to leak.
+- **The server stays bearer-only.** It holds no refresh token; renewal is the caller's job. The cost
+  — a 30-minute token and re-running the mint helper — was accepted deliberately.
+- **Xero's demo company is the first authorisation target, for plumbing only.**
 
 ---
 
@@ -40,18 +46,68 @@ for nothing. **That is why this repo is standalone, and there is no committed co
 
 | # | Decision | Owner | Blocks |
 |---|---|---|---|
-| 1 | An Australian Xero org with realistic current data, plus a Custom Connection on it | Johann | The fixture harness (change 002) and every Payroll AU tool. Xero's demo company returns a pre-2022 9% super rate |
-| 2 | Is a super payment visible as a `BankTransaction`? | Unverified | Any consumer's receipt logic. Worth testing the day an org is available |
-| 3 | Who is the second consumer, and do they need HTTP transport or stdio? | BISTEC | Transport work and the auth story. Upstream is stdio-only |
+| 1 | An Australian Xero org with realistic current data | Johann | The fixture harness and every Payroll AU tool. The demo company returns a pre-2022 super rate, so it can prove plumbing and nothing about Payday Super |
+| 2 | Is a super payment visible as a `BankTransaction`? | Unverified | Any consumer's receipt logic. Testable the day an org exists |
+| 3 | Who is the second consumer, and do they need HTTP transport or stdio? | BISTEC | Transport work. Upstream is stdio-only |
 | 4 | Does any platform require a specific MCP registration format? | BISTEC / Nexus team | Packaging only |
-| 5 | Is `$10/month AUD` per Custom Connection acceptable to whoever operates this? | BISTEC | Nothing technical — the org being read pays Xero directly |
-| 6 | **New.** Should the deferred runtime response-egress filter land with bearer auth, or with the first Payroll AU tool? | BISTEC | Closes the one PII gap change 001 leaves open — a value Xero places in report *cell text* still reaches the caller |
+| ~~5~~ | ~~Is $10/month per Custom Connection acceptable?~~ | — | **Closed.** A PKCE app is free |
+| ~~6~~ | ~~Where does the runtime egress filter land?~~ | — | **Closed by 002.** It landed with bearer auth, at the tool factory |
+| 7 | **New.** Is a per-*process* token enough, or does something need multi-*identity*? | BISTEC | Nothing yet. stdio MCP has no per-request header, so 002 delivers per-call *tenant* selection against a per-process *identity* — one token, many organisations. Less than the brief's wording implies |
 
 ---
 
 ## Session log
 
 Newest first. Append only.
+
+### 2026-09-09 — Claude (Opus 5), scheduled unattended run — change 002: bearer auth, tenant selection
+
+Ran overnight from a scheduled continuation. Full lifecycle: propose (approved), plan, build across
+5 waves and 10 tasks, verify. **128 tests, green with no `XERO_*` variable set.**
+
+**Did**
+
+- `resolve-tenant.ts` owns the whole "which organisation" decision and refuses to guess
+- All 18 handlers take the tenant as a required first argument; none reads the singleton
+- All 19 tools take an optional `tenantId` and name the organisation in their output
+- `list-tenants` added; surface 18 → 19, with Guard A's pinned count and tool list both updated
+  deliberately
+- Runtime egress filter at `CreateXeroTool`, with permanent negative controls
+- PKCE mint helper, no secret, no disk writes
+- README: token minting, scopes, organisation selection, and the demo-company smoke test
+
+**Worth knowing before the next session**
+
+- **The guards caught this change three times, and each catch was correct.** Guard A flagged
+  `updateTenants` as mutating (it is a GET; the fake now stubs it rather than the pattern being
+  loosened). Guard B went to zero usable tools because the driver's id heuristic missed camelCase
+  `tenantId`, so every driven call errored — and a tool that renders nothing renders no PII, which
+  Guard B correctly refused to pass. Guard C caught the egress filter's own new `console.warn`.
+- **Guard C's rule 4 vocabulary was extended**, from "tool names, tenant identifiers, durations" to
+  also permit a field path — three words: `kind`, `path`, `finding`. A field path is metadata about
+  a response, not the response. **That is the distinction to re-examine if anyone widens it again.**
+  An earlier draft added ten words including `value`, `text` and `content`; that was trimmed.
+- **A guard-infrastructure invariant is now pinned**: the fake's authorised tenant must equal the
+  driver's synthesised GUID. When they drifted, Guard B reported green while checking nothing.
+- **The PII matcher gained `redactPii`**, sharing one classification generator with `findPii` so
+  detection and redaction cannot disagree. Redaction lives in the matcher because `findPii`
+  deliberately never returns the matched value, so no caller *can* redact from a finding.
+- **`updateTenants(false)`** — the SDK default fans out one `getOrganisations` call per authorised
+  organisation, spending thirteen requests for a twelve-org token against a 60/minute limit, for a
+  field nothing reads.
+- **The smoke test has not been run.** PKCE consent needs a human browser. It is documented in the
+  README and is the operator's to perform.
+- Still unresolved from 001: a PII value Xero places in report *cell text* reaches the caller. The
+  egress filter now catches it **if the matcher recognises it**, which narrows but does not close
+  the gap — the formatter is still a shape guard, not a redactor.
+
+**Next**
+
+1. Merge 002, then run the demo-company smoke test.
+2. Change 003: the fixture-capture harness, redacting at capture. Needs Johann's AU org for real
+   data (decision 1), though the harness itself does not.
+3. Then the first Payroll AU tools — pay runs and payslips, including `SuperannuationLines[]`, which
+   is the reason this repo exists. Payroll scopes join the mint helper there.
 
 ### 2026-09-08 — Damian + Claude (Opus 5) — change 001: fork, strip writes, stand up the guards
 

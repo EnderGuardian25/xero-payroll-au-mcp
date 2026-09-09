@@ -2,6 +2,10 @@ import { z } from "zod";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 import { listXeroBankTransactions } from "../../handlers/list-xero-bank-transactions.handler.js";
 import { formatLineItem } from "../../helpers/format-line-item.js";
+import {
+  resolveTenantForTool,
+  tenantIdArg,
+} from "../../helpers/tenant-arg.js";
 
 const ListBankTransactionsTool = CreateXeroTool(
   "list-bank-transactions",
@@ -13,11 +17,15 @@ const ListBankTransactionsTool = CreateXeroTool(
   If they do, call this tool again with the next page number and the bank account
   if one was provided in the provided in the previous call.`,
   {
+    ...tenantIdArg,
     page: z.number(),
     bankAccountId: z.string().optional()
   },
-  async ({ bankAccountId, page }) => {
-    const response = await listXeroBankTransactions(page, bankAccountId);
+  async ({ tenantId, bankAccountId, page }) => {
+    const resolved = await resolveTenantForTool(tenantId, "bank transactions");
+    if (!resolved.ok) return resolved.result;
+
+    const response = await listXeroBankTransactions(resolved.tenant.tenantId, page, bankAccountId);
     if (response.isError) {
       return {
         content: [
@@ -35,7 +43,7 @@ const ListBankTransactionsTool = CreateXeroTool(
       content: [
         {
           type: "text" as const,
-          text: `Found ${bankTransactions?.length || 0} bank transactions:`
+          text: `Found ${bankTransactions?.length || 0} bank transactions in ${resolved.tenant.tenantName}:`
         },
         ...(bankTransactions?.map((transaction) => ({
           type: "text" as const,

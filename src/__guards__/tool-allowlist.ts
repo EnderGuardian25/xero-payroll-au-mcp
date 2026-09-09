@@ -112,6 +112,21 @@ export const TOOL_ALLOWLIST: readonly RegisteredTool[] = [
     handler: "src/handlers/list-xero-tax-rates.handler.ts",
   },
   {
+    // Added by change 002. Reads GET /connections to report which Xero
+    // organisations the current token is authorised for — the discovery step
+    // every other tool's tenantId depends on, since a caller cannot pass an
+    // organisation id it has no way to learn.
+    //
+    // Recorded here as a deliberate addition, not a build-fixing append. The
+    // comment at the top of this file is not decoration: a red CI run whose
+    // stated remedy is "add the name to the list" is exactly how this file
+    // decays into a rubber stamp. The justification is that this is a read
+    // tool, introduced on purpose, and Guard A's capability checks — not this
+    // entry — are what prove it cannot write.
+    name: "list-tenants",
+    handler: "src/handlers/list-xero-connections.handler.ts",
+  },
+  {
     name: "list-tracking-categories",
     handler: "src/handlers/list-xero-tracking-categories.handler.ts",
   },

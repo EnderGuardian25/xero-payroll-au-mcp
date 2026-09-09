@@ -4,11 +4,11 @@ import { XeroClientResponse } from "../types/tool-response.js";
 import { formatError } from "../helpers/format-error.js";
 import { getClientHeaders } from "../helpers/get-client-headers.js";
 
-async function getContacts(page?: number, searchTerm?: string): Promise<Contact[]> {
+async function getContacts(tenantId: string, page?: number, searchTerm?: string): Promise<Contact[]> {
   await xeroClient.authenticate();
 
   const contacts = await xeroClient.accountingApi.getContacts(
-    xeroClient.tenantId,
+    tenantId,
     undefined, // ifModifiedSince
     undefined, // where
     undefined, // order
@@ -26,11 +26,11 @@ async function getContacts(page?: number, searchTerm?: string): Promise<Contact[
 /**
  * List all contacts from Xero
  */
-export async function listXeroContacts(page?: number, searchTerm?: string): Promise<
+export async function listXeroContacts(tenantId: string, page?: number, searchTerm?: string): Promise<
   XeroClientResponse<Contact[]>
 > {
   try {
-    const contacts = await getContacts(page, searchTerm);
+    const contacts = await getContacts(tenantId, page, searchTerm);
 
     return {
       result: contacts,

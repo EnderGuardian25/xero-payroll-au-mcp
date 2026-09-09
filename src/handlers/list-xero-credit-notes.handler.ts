@@ -5,13 +5,14 @@ import { CreditNote } from "xero-node";
 import { getClientHeaders } from "../helpers/get-client-headers.js";
 
 async function getCreditNotes(
+  tenantId: string,
   contactId: string | undefined,
   page: number,
 ): Promise<CreditNote[]> {
   await xeroClient.authenticate();
 
   const response = await xeroClient.accountingApi.getCreditNotes(
-    xeroClient.tenantId,
+    tenantId,
     undefined, // ifModifiedSince
     contactId ? `Contact.ContactID=guid("${contactId}")` : undefined, // where
     "UpdatedDateUTC DESC", // order
@@ -28,11 +29,12 @@ async function getCreditNotes(
  * List all credit notes from Xero
  */
 export async function listXeroCreditNotes(
+  tenantId: string,
   page: number = 1,
   contactId?: string,
 ): Promise<XeroClientResponse<CreditNote[]>> {
   try {
-    const creditNotes = await getCreditNotes(contactId, page);
+    const creditNotes = await getCreditNotes(tenantId, contactId, page);
 
     return {
       result: creditNotes,

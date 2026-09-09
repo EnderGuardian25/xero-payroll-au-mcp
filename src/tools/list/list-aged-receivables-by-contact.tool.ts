@@ -3,12 +3,17 @@ import { listXeroAgedReceivablesByContact } from "../../handlers/list-aged-recei
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 import { formatAgedReportFilter } from "../../helpers/format-aged-report-filter.js";
 import { formatReportRows } from "../../helpers/format-report-rows.js";
+import {
+  resolveTenantForTool,
+  tenantIdArg,
+} from "../../helpers/tenant-arg.js";
 
 const ListAgedReceivablesByContact = CreateXeroTool(
   "list-aged-receivables-by-contact",
   `Lists the aged receivables in Xero.
   This shows aged receivables for a certain contact up to a report date.`,
   {
+    ...tenantIdArg,
     contactId: z.string(),
     reportDate: z.string().optional()
       .describe("Optional date to retrieve aged receivables in YYYY-MM-DD format. If none is provided, defaults to end of the current month."),
@@ -17,9 +22,12 @@ const ListAgedReceivablesByContact = CreateXeroTool(
     invoicesToDate: z.string().optional()
       .describe("Optional to date in YYYY-MM-DD format. If provided, will only show payable invoices before this date for the contact."),
   },
-  async ({ contactId, reportDate, invoicesFromDate, invoicesToDate }) => {
-    const response = await listXeroAgedReceivablesByContact(contactId, reportDate, invoicesFromDate, invoicesToDate);
-    
+  async ({ tenantId, contactId, reportDate, invoicesFromDate, invoicesToDate }) => {
+    const resolved = await resolveTenantForTool(tenantId, "aged receivables by contact");
+    if (!resolved.ok) return resolved.result;
+
+    const response = await listXeroAgedReceivablesByContact(resolved.tenant.tenantId, contactId, reportDate, invoicesFromDate, invoicesToDate);
+
     if (response.isError) {
       return {
         content: [
@@ -38,7 +46,7 @@ const ListAgedReceivablesByContact = CreateXeroTool(
       content: [
         {
           type: "text" as const,
-          text: `Report Name: ${agedReceivablesReport.reportName || "Not specified"}`,
+          text: `Report Name: ${agedReceivablesReport.reportName || "Not specified"} in ${resolved.tenant.tenantName}`,
         },
         {
           type: "text" as const,

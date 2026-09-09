@@ -10,7 +10,7 @@ import {
   findUnreviewedSerialisation,
 } from "./scan-pii-fields.js";
 import { scanSource } from "./scan-payload-logs.js";
-import { findPii } from "./pii-matcher.js";
+import { findPii } from "../security/pii-matcher.js";
 import { driveAllTools } from "./tool-driver.js";
 import type { RegisteredTool } from "./tool-registry.js";
 

@@ -5,6 +5,7 @@ import { Invoice } from "xero-node";
 import { getClientHeaders } from "../helpers/get-client-headers.js";
 
 async function getInvoices(
+  tenantId: string,
   invoiceNumbers: string[] | undefined,
   contactIds: string[] | undefined,
   page: number,
@@ -12,7 +13,7 @@ async function getInvoices(
   await xeroClient.authenticate();
 
   const invoices = await xeroClient.accountingApi.getInvoices(
-    xeroClient.tenantId,
+    tenantId,
     undefined, // ifModifiedSince
     undefined, // where
     "UpdatedDateUTC DESC", // order
@@ -36,12 +37,13 @@ async function getInvoices(
  * List all invoices from Xero
  */
 export async function listXeroInvoices(
+  tenantId: string,
   page: number = 1,
   contactIds?: string[],
   invoiceNumbers?: string[],
 ): Promise<XeroClientResponse<Invoice[]>> {
   try {
-    const invoices = await getInvoices(invoiceNumbers, contactIds, page);
+    const invoices = await getInvoices(tenantId, invoiceNumbers, contactIds, page);
 
     return {
       result: invoices,

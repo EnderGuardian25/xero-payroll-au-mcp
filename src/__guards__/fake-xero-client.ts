@@ -1,6 +1,7 @@
 import type { MCPXeroClient } from "../clients/xero-client.js";
 
-import { isValidTfn } from "./pii-matcher.js";
+import { isValidTfn } from "../security/pii-matcher.js";
+import { SYNTHETIC_GUID } from "./tool-driver.js";
 
 /*
  * A stand-in Xero client for the guards, injected via
@@ -34,14 +35,51 @@ import { isValidTfn } from "./pii-matcher.js";
  * The mutating-verb pattern from spec FR6b, reused here so the static check
  * and the dynamic check cannot disagree about what "mutating" means.
  *
- * Note this deliberately catches `updateTenants` on the client itself, which
- * is a GET under the hood. No retained handler calls it, and being strict
- * about a method whose *name* announces a write is the right default for a
- * guard: a fake that quietly permits `update*` is a fake that will one day
- * permit a real one.
+ * The pattern is unchanged from 001 and stays deliberately strict: a fake that
+ * quietly permits `update*` is a fake that will one day permit a real one.
+ *
+ * ## `updateTenants`, and why it is stubbed rather than excused
+ *
+ * 001's version of this comment said `updateTenants` is caught by name, is a
+ * GET underneath, and that "no retained handler calls it". Change 002 made
+ * that last clause false: `resolve-tenant.ts` calls it on every tool call, to
+ * read which organisations a token is authorised for.
+ *
+ * The pattern was **not** loosened to accommodate that. Loosening it would
+ * have permitted a whole class of names to buy one exception. Instead the fake
+ * *stubs* `updateTenants` (see `clientStubs` below), so it is recorded as the
+ * read it actually is and the mutating branch never sees it. The distinction
+ * matters: an unstubbed `update*` call still fails, exactly as before.
+ *
+ * The evidence that it is a read, for whoever audits this next — xero-node's
+ * `XeroClient.updateTenants()` body is
+ * `queryApi('GET', 'https://api.xero.com/connections')`.
  */
 export const MUTATING_METHOD_PATTERN =
   /^(create|update|delete|post|put|patch|approve|revert|archive|void|email)/i;
+
+/**
+ * The organisations this fake token is authorised for: exactly one.
+ *
+ * The id is `SYNTHETIC_GUID` on purpose, not decoration. `tool-driver.ts`
+ * synthesises that value for any argument whose name ends in `id`, so a driven
+ * tool's `tenantId` matches this connection and resolution succeeds in the
+ * driver's "fill" mode. With a single authorised organisation it also succeeds
+ * in "omit" mode, via the unambiguous-single-tenant branch. Both driver passes
+ * therefore reach the code under test.
+ *
+ * If the two constants ever drift apart, every driven tool silently reverts to
+ * returning a resolution error, and Guard B's PII check becomes vacuous while
+ * still reporting green. `egress-filter.test.ts` asserts they match, so that
+ * drift fails the build instead.
+ */
+export const AUTHORISED_CONNECTIONS = [
+  {
+    tenantId: SYNTHETIC_GUID,
+    tenantName: "Wattle Street Pty Ltd",
+    tenantType: "ORGANISATION",
+  },
+] as const;
 
 /**
  * Synthetic PII planted into responses when `plantPii` is set.
@@ -664,12 +702,24 @@ export function createFakeXeroClient(
 
   const clientStubs: Stubs = {
     tenantId: FAKE_TENANT_ID,
-    tenants: [],
+    tenants: AUTHORISED_CONNECTIONS,
     accountingApi: createEnforcingSurface("accountingApi", accountingApi, log),
     // Every handler awaits this first. A no-op is correct: the fake holds no
     // credentials and reaches no network, which is exactly why CI can run it
     // with no XERO_* variable set (spec FR11 / NFR5).
     authenticate: () => Promise.resolve(),
+    /*
+     * Stubbed as a read, which is what it is — see MUTATING_METHOD_PATTERN's
+     * comment for the evidence and for why the pattern was not loosened
+     * instead.
+     *
+     * It must also return a connection list that tenant resolution can
+     * actually resolve, or Guard B goes quietly vacuous: every driven tool
+     * would fail resolution, return an error render, and a tool that rendered
+     * nothing trivially renders no PII. Guard B correctly refused to pass in
+     * that state, which is how this was caught.
+     */
+    updateTenants: () => Promise.resolve(AUTHORISED_CONNECTIONS),
     getShortCode: () => Promise.resolve("!wattl"),
   };
 

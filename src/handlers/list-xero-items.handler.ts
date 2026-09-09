@@ -5,12 +5,13 @@ import { Item } from "xero-node";
 import { getClientHeaders } from "../helpers/get-client-headers.js";
 
 async function getItems(
+  tenantId: string,
   page: number,
 ): Promise<Item[]> {
   await xeroClient.authenticate();
 
   const items = await xeroClient.accountingApi.getItems(
-    xeroClient.tenantId,
+    tenantId,
     undefined, // ifModifiedSince
     undefined, // where
     undefined, // order
@@ -24,10 +25,11 @@ async function getItems(
  * List all items from Xero
  */
 export async function listXeroItems(
+  tenantId: string,
   page: number = 1,
 ): Promise<XeroClientResponse<Item[]>> {
   try {
-    const items = await getItems(page);
+    const items = await getItems(tenantId, page);
 
     return {
       result: items,

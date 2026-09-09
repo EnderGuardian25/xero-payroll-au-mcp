@@ -1,6 +1,10 @@
 import { z } from "zod";
 import { listXeroCreditNotes } from "../../handlers/list-xero-credit-notes.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
+import {
+  resolveTenantForTool,
+  tenantIdArg,
+} from "../../helpers/tenant-arg.js";
 
 const ListCreditNotesTool = CreateXeroTool(
   "list-credit-notes",
@@ -12,11 +16,15 @@ const ListCreditNotesTool = CreateXeroTool(
   If they want the next page, call this tool again with the next page number 
   and the contact if one was provided in the previous call.`,
   {
+    ...tenantIdArg,
     page: z.number(),
     contactId: z.string().optional(),
   },
-  async ({ page, contactId }) => {
-    const response = await listXeroCreditNotes(page, contactId);
+  async ({ tenantId, page, contactId }) => {
+    const resolved = await resolveTenantForTool(tenantId, "credit notes");
+    if (!resolved.ok) return resolved.result;
+
+    const response = await listXeroCreditNotes(resolved.tenant.tenantId, page, contactId);
     if (response.error !== null) {
       return {
         content: [
@@ -34,7 +42,7 @@ const ListCreditNotesTool = CreateXeroTool(
       content: [
         {
           type: "text" as const,
-          text: `Found ${creditNotes?.length || 0} credit notes:`,
+          text: `Found ${creditNotes?.length || 0} credit notes in ${resolved.tenant.tenantName}:`,
         },
         ...(creditNotes?.map((creditNote) => ({
           type: "text" as const,

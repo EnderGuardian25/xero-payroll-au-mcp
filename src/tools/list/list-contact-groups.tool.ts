@@ -1,20 +1,28 @@
 import { z } from "zod";
 import { listXeroContactGroups } from "../../handlers/list-xero-contact-groups.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
+import {
+  resolveTenantForTool,
+  tenantIdArg,
+} from "../../helpers/tenant-arg.js";
 
 const ListContactGroupsTool = CreateXeroTool(
   "list-contact-groups",
   `List all contact groups in Xero.
   You can optionally specify a contact group ID to retrieve details for that specific group, including its contacts.`,
   {
+    ...tenantIdArg,
     contactGroupId: z
       .string()
       .optional()
-      .describe("Optional ID of the contact group to retrieve"),    
+      .describe("Optional ID of the contact group to retrieve"),
   },
   async (args) => {
-    const response = await listXeroContactGroups(args?.contactGroupId);
-    
+    const resolved = await resolveTenantForTool(args?.tenantId, "contact groups");
+    if (!resolved.ok) return resolved.result;
+
+    const response = await listXeroContactGroups(resolved.tenant.tenantId, args?.contactGroupId);
+
     if (response.error !== null) {
       return {
         content: [
@@ -32,7 +40,7 @@ const ListContactGroupsTool = CreateXeroTool(
       content: [
         {
           type: "text" as const,
-          text: `Found ${contactGroups?.length || 0} contact groups:`,
+          text: `Found ${contactGroups?.length || 0} contact groups in ${resolved.tenant.tenantName}:`,
         },
         ...(contactGroups?.map((contactGroup) => ({
           type: "text" as const,

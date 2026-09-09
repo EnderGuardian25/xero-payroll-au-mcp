@@ -5,12 +5,13 @@ import { XeroClientResponse } from "../types/tool-response.js";
 import { formatError } from "../helpers/format-error.js";
 
 async function getBankTransactions(
+  tenantId: string,
   page: number,
   bankAccountId?: string,
 ): Promise<BankTransaction[]> {
   await xeroClient.authenticate();
 
-  const response = await xeroClient.accountingApi.getBankTransactions(xeroClient.tenantId,
+  const response = await xeroClient.accountingApi.getBankTransactions(tenantId,
       undefined, // ifModifiedSince
       bankAccountId ? `BankAccount.AccountID=guid("${bankAccountId}")` : undefined, // where
       "Date DESC", // order
@@ -24,11 +25,12 @@ async function getBankTransactions(
 }
 
 export async function listXeroBankTransactions(
+  tenantId: string,
   page: number = 1,
   bankAccountId?: string
 ): Promise<XeroClientResponse<BankTransaction[]>> {
   try {
-    const bankTransactions = await getBankTransactions(page, bankAccountId);
+    const bankTransactions = await getBankTransactions(tenantId, page, bankAccountId);
 
     return {
       result: bankTransactions,

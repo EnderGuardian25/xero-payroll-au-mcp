@@ -24,7 +24,8 @@
     "lint": "eslint .",
     "inventory": "node scripts/tool-inventory.mjs",
     "fixtures:scan": "node scripts/scan-staged-fixtures.mjs",
-    "guards": "vitest run src/__guards__"
+    "guards": "vitest run src/__guards__",
+    "mint-token": "node scripts/mint-token.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.23.4",

@@ -8,13 +8,14 @@ import { ReportWithRow } from "xero-node";
  * Internal function to fetch trial balance data from Xero
  */
 async function fetchTrialBalance(
+  tenantId: string,
   date?: string,
   paymentsOnly?: boolean,
 ): Promise<ReportWithRow | null> {
   await xeroClient.authenticate();
 
   const response = await xeroClient.accountingApi.getReportTrialBalance(
-    xeroClient.tenantId,
+    tenantId,
     date, // Optional date parameter in YYYY-MM-DD format
     paymentsOnly, // Optional boolean to include only accounts with payments
     getClientHeaders(),
@@ -29,11 +30,12 @@ async function fetchTrialBalance(
  * @param paymentsOnly Optional boolean to include only accounts with payments
  */
 export async function listXeroTrialBalance(
+  tenantId: string,
   date?: string,
   paymentsOnly?: boolean,
 ): Promise<XeroClientResponse<ReportWithRow>> {
   try {
-    const trialBalance = await fetchTrialBalance(date, paymentsOnly);
+    const trialBalance = await fetchTrialBalance(tenantId, date, paymentsOnly);
 
     if (!trialBalance) {
       return {

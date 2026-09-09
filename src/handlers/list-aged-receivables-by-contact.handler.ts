@@ -5,6 +5,7 @@ import { getClientHeaders } from "../helpers/get-client-headers.js";
 import { ReportWithRow } from "xero-node";
 
 async function listAgedReceivablesByContact(
+  tenantId: string,
   contactId: string,
   reportDate?: string,
   invoicesFromDate?: string,
@@ -13,7 +14,7 @@ async function listAgedReceivablesByContact(
   await xeroClient.authenticate();
 
   const response = await xeroClient.accountingApi.getReportAgedReceivablesByContact(
-    xeroClient.tenantId, // xeroTenantId
+    tenantId, // xeroTenantId
     contactId, // contactId
     reportDate, // date
     invoicesFromDate, // fromDate
@@ -25,13 +26,14 @@ async function listAgedReceivablesByContact(
 }
 
 export async function listXeroAgedReceivablesByContact(
+  tenantId: string,
   contactId: string,
   reportDate?: string,
   invoicesFromDate?: string,
   invoicesToDate?: string
 ): Promise<XeroClientResponse<ReportWithRow>> {
   try {
-    const agedReceivables = await listAgedReceivablesByContact(contactId, reportDate, invoicesFromDate, invoicesToDate);
+    const agedReceivables = await listAgedReceivablesByContact(tenantId, contactId, reportDate, invoicesFromDate, invoicesToDate);
 
     if (!agedReceivables) {
       return {

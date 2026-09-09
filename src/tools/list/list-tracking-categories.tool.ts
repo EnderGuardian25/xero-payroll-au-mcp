@@ -2,16 +2,24 @@ import { z } from "zod";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 import { listXeroTrackingCategories } from "../../handlers/list-xero-tracking-categories.handler.js";
 import { formatTrackingOption } from "../../helpers/format-tracking-option.js";
+import {
+  resolveTenantForTool,
+  tenantIdArg,
+} from "../../helpers/tenant-arg.js";
 
 const ListTrackingCategoriesTool = CreateXeroTool(
   "list-tracking-categories",
   "List all tracking categories in Xero, along with their associated tracking options.",
   {
+    ...tenantIdArg,
     includeArchived: z.boolean().optional()
       .describe("Determines whether or not archived categories will be returned. By default, no archived categories will be returned.")
   },
-  async ({ includeArchived }) => {
-    const response = await listXeroTrackingCategories(includeArchived);
+  async ({ tenantId, includeArchived }) => {
+    const resolved = await resolveTenantForTool(tenantId, "tracking categories");
+    if (!resolved.ok) return resolved.result;
+
+    const response = await listXeroTrackingCategories(resolved.tenant.tenantId, includeArchived);
 
     if (response.isError) {
       return {
@@ -30,7 +38,7 @@ const ListTrackingCategoriesTool = CreateXeroTool(
       content: [
         {
           type: "text" as const,
-          text: `Found ${trackingCategories?.length || 0} tracking categories:`
+          text: `Found ${trackingCategories?.length || 0} tracking categories in ${resolved.tenant.tenantName}:`
         },
         ...(trackingCategories?.map((category) => ({
           type: "text" as const,

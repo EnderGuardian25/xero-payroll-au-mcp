@@ -5,6 +5,7 @@ import { XeroClientResponse } from "../types/tool-response.js";
 import { getClientHeaders } from "../helpers/get-client-headers.js";
 
 async function getManualJournals(
+  tenantId: string,
   page: number,
   manualJournalId?: string,
   modifiedAfter?: string,
@@ -13,7 +14,7 @@ async function getManualJournals(
 
   if (manualJournalId) {
     const response = await xeroClient.accountingApi.getManualJournal(
-      xeroClient.tenantId,
+      tenantId,
       manualJournalId,
       getClientHeaders(),
     );
@@ -22,7 +23,7 @@ async function getManualJournals(
   }
 
   const response = await xeroClient.accountingApi.getManualJournals(
-    xeroClient.tenantId,
+    tenantId,
     modifiedAfter ? new Date(modifiedAfter) : undefined,
     undefined,
     "UpdatedDateUTC DESC",
@@ -38,12 +39,14 @@ async function getManualJournals(
  * List all manual journals from Xero.
  */
 export async function listXeroManualJournals(
+  tenantId: string,
   page: number = 1,
   manualJournalId?: string,
   modifiedAfter?: string,
 ): Promise<XeroClientResponse<ManualJournal[]>> {
   try {
     const manualJournals = await getManualJournals(
+      tenantId,
       page,
       manualJournalId,
       modifiedAfter,

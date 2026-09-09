@@ -1,19 +1,27 @@
 import { listXeroContacts } from "../../handlers/list-xero-contacts.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 import { z } from "zod";
+import {
+  resolveTenantForTool,
+  tenantIdArg,
+} from "../../helpers/tenant-arg.js";
 
 const ListContactsTool = CreateXeroTool(
   "list-contacts",
   "List all contacts in Xero. This includes Suppliers and Customers.",
   {
+    ...tenantIdArg,
     page: z.number().optional().describe("Optional page number to retrieve for pagination. \
       If not provided, the first page will be returned. If 100 contacts are returned, \
       call this tool again with the next page number."),
     searchTerm: z.string().optional().describe("Search parameter that performs a case-insensitive text search across the Name, FirstName, LastName, ContactNumber and EmailAddress fields"),
   },
   async (params) => {
-    const { page, searchTerm } = params;
-    const response = await listXeroContacts(page, searchTerm);
+    const { tenantId, page, searchTerm } = params;
+    const resolved = await resolveTenantForTool(tenantId, "contacts");
+    if (!resolved.ok) return resolved.result;
+
+    const response = await listXeroContacts(resolved.tenant.tenantId, page, searchTerm);
 
     if (response.isError) {
       return {
@@ -32,7 +40,7 @@ const ListContactsTool = CreateXeroTool(
       content: [
         {
           type: "text" as const,
-          text: `Found ${contacts?.length || 0} contacts${page ? ` (page ${page})` : ''}:`,
+          text: `Found ${contacts?.length || 0} contacts in ${resolved.tenant.tenantName}${page ? ` (page ${page})` : ''}:`,
         },
         ...(contacts?.map((contact) => ({
           type: "text" as const,

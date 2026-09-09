@@ -2,6 +2,10 @@ import { ManualJournal } from "xero-node";
 import { listXeroManualJournals } from "../../handlers/list-xero-manual-journals.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
 import { z } from "zod";
+import {
+  resolveTenantForTool,
+  tenantIdArg,
+} from "../../helpers/tenant-arg.js";
 
 const ListManualJournalsTool = CreateXeroTool(
   "list-manual-journals",
@@ -12,6 +16,7 @@ The response presents a complete overview of all manual journals currently regis
 Ask the user if they want the next page of manual journals after running this tool if 10 manual journals are returned.
 If they want the next page, call this tool again with the next page number, modified date, and the manual journal ID if one was provided in the previous call.`,
   {
+    ...tenantIdArg,
     manualJournalId: z
       .string()
       .optional()
@@ -26,7 +31,11 @@ If they want the next page, call this tool again with the next page number, modi
     // TODO: where, order
   },
   async (args) => {
+    const resolved = await resolveTenantForTool(args?.tenantId, "manual journals");
+    if (!resolved.ok) return resolved.result;
+
     const response = await listXeroManualJournals(
+      resolved.tenant.tenantId,
       args?.page,
       args?.manualJournalId,
       args?.modifiedAfter,
@@ -49,7 +58,7 @@ If they want the next page, call this tool again with the next page number, modi
       content: [
         {
           type: "text" as const,
-          text: `Found ${manualJournals?.length || 0} manual journals:`,
+          text: `Found ${manualJournals?.length || 0} manual journals in ${resolved.tenant.tenantName}:`,
         },
         ...(manualJournals?.map((journal: ManualJournal) => ({
           type: "text" as const,

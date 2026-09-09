@@ -20,7 +20,7 @@ final so its negative controls exercise the real 19-tool registry.
 
 ### Wave 1 — Foundations: shared matcher, tenant resolution
 
-- [ ] `T1` — Move the PII matcher into production reach
+- [x] `T1` — Move the PII matcher into production reach
   - Files: `src/security/pii-matcher.ts` (from `src/__guards__/pii-matcher.ts`),
     `src/__guards__/pii-matcher.test.ts`, `src/__guards__/scan-pii-fields.ts`,
     `src/__guards__/fake-xero-client.ts`, `scripts/scan-staged-fixtures.mjs`
@@ -32,7 +32,7 @@ final so its negative controls exercise the real 19-tool registry.
     afterwards; check its path assumptions. Add the AC11 case here while touching the tests: a tenant
     GUID must not be flagged. `npm test` green before moving on.
 
-- [ ] `T2` — Build tenant resolution, and stop the client choosing
+- [x] `T2` — Build tenant resolution, and stop the client choosing
   - Files: `src/clients/resolve-tenant.ts`, `src/clients/xero-client.ts`,
     `src/clients/__tests__/resolve-tenant.test.ts`
   - Estimate: medium
@@ -49,7 +49,7 @@ final so its negative controls exercise the real 19-tool registry.
 
 ### Wave 2 — Thread the tenant through the handlers
 
-- [ ] `T3` — Give all 18 handlers an explicit tenant parameter
+- [x] `T3` — Give all 18 handlers an explicit tenant parameter
   - Files: all 18 `src/handlers/*.handler.ts`
   - Estimate: large
   - Kind: refactor
@@ -61,7 +61,7 @@ final so its negative controls exercise the real 19-tool registry.
     touches everything, so `npm run build` and `npm test` must both be green at the end before tools
     change.
 
-- [ ] `T4` — Add the connections handler
+- [x] `T4` — Add the connections handler
   - Files: `src/handlers/list-xero-connections.handler.ts`
   - Estimate: small
   - Kind: impl
@@ -72,7 +72,7 @@ final so its negative controls exercise the real 19-tool registry.
 
 ### Wave 3 — Expose it on the tool surface
 
-- [ ] `T5` — Add optional `tenantId` to all 18 tools and name the organisation in output
+- [x] `T5` — Add optional `tenantId` to all 18 tools and name the organisation in output
   - Files: all 18 `src/tools/list/*.tool.ts`
   - Estimate: large
   - Kind: impl
@@ -84,7 +84,7 @@ final so its negative controls exercise the real 19-tool registry.
     single-organisation case is unchanged and no existing call breaks (design D3). A resolution
     error must surface as the tool's error text, in the same style as the existing error branches.
 
-- [ ] `T6` — Add the `list-tenants` tool and register it
+- [x] `T6` — Add the `list-tenants` tool and register it
   - Files: `src/tools/list/list-tenants.tool.ts`, `src/tools/list/index.ts`,
     `src/__guards__/tool-allowlist.ts`
   - Estimate: small
@@ -98,7 +98,7 @@ final so its negative controls exercise the real 19-tool registry.
 
 ### Wave 4 — The runtime egress filter and its guards
 
-- [ ] `T7` — Build the egress filter and wire it into the single funnel
+- [x] `T7` — Build the egress filter and wire it into the single funnel
   - Files: `src/security/egress-filter.ts`, `src/helpers/create-xero-tool.ts`
   - Estimate: medium
   - Kind: impl
@@ -111,7 +111,7 @@ final so its negative controls exercise the real 19-tool registry.
     through, so the whole surface and every future Payroll AU tool inherit it from one file
     (design D4). Closes `HANDOFF.md` open decision 6.
 
-- [ ] `T8` — Guard the filter, permanently
+- [x] `T8` — Guard the filter, permanently
   - Files: `src/__guards__/egress-filter.test.ts`,
     `src/__guards__/fixtures/violation-egress-tfn.ts`
   - Estimate: medium
@@ -126,7 +126,7 @@ final so its negative controls exercise the real 19-tool registry.
 
 ### Wave 5 — Minting, docs, handoff
 
-- [ ] `T9` — PKCE token-minting helper
+- [x] `T9` — PKCE token-minting helper
   - Files: `scripts/mint-token.mjs`, `package.json`
   - Estimate: medium
   - Kind: impl
@@ -137,7 +137,7 @@ final so its negative controls exercise the real 19-tool registry.
     (NFR1 / AC15). Report a busy loopback port instead of hanging (spec Edge Cases). Do **not** run
     it against Xero — consent needs a human browser, and the smoke test is the user's to perform.
 
-- [ ] `T10` — Docs, handoff, and final gates
+- [x] `T10` — Docs, handoff, and final gates
   - Files: `README.md`, `HANDOFF.md`
   - Estimate: medium
   - Kind: docs

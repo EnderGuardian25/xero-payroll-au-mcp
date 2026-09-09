@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { findPii, isValidTfn, type PiiFinding } from "./pii-matcher.js";
+import { findPii, isValidTfn, type PiiFinding } from "../pii-matcher.js";
 
 /**
  * Weights restated from the ATO specification rather than imported from the matcher. If the test
@@ -241,6 +241,47 @@ describe("findPii does not flag values this surface must emit", () => {
       // The exclusion must never reach the checksum rule. This is the assertion
       // that would fail if someone moved the date check above the TFN check.
       expect(findPii(`Date: 2026-08-14\nTFN ${TFN}`)).toEqual([
+        { kind: "tfn", path: "" },
+      ]);
+    });
+  });
+
+  /*
+   * Change 002 makes tenant GUIDs a routine part of every tool's output — a
+   * caller passes one in and each response names the organisation it read. So
+   * the matcher now sees them constantly, and a false positive here would fire
+   * on the whole surface rather than in some corner.
+   *
+   * This is asserted rather than assumed. Candidate extraction already rejects
+   * digit runs welded into identifiers, which is why a GUID's segments stay
+   * separate, but "should be fine by construction" is exactly the reasoning
+   * these tests exist to replace. Spec 002 AC11.
+   */
+  describe("tenant identifiers (change 002)", () => {
+    const TENANT = "5eed0000-1111-4aaa-8bbb-ccccdddd0002";
+
+    it("does not flag a tenant GUID, bare or labelled", () => {
+      expect(findPii(TENANT)).toEqual([]);
+      expect(findPii(`Organisation: Wattle Street Pty Ltd (${TENANT})`)).toEqual(
+        [],
+      );
+      expect(findPii({ tenantId: TENANT, tenantName: "Demo Company (AU)" })).toEqual(
+        [],
+      );
+    });
+
+    it("does not flag a tenant GUID even beside a bank cue", () => {
+      // list-bank-transactions renders both a tenant id and "Bank Account:",
+      // which is the combination that produced the date false positive above.
+      expect(
+        findPii(`Bank Account: Cheque\nOrganisation: Demo (${TENANT})`),
+      ).toEqual([]);
+    });
+
+    it("still flags a real TFN sitting beside a tenant GUID", () => {
+      // The exclusion must not become a blanket amnesty for anything near a
+      // GUID. This is the assertion that fails if someone widens it.
+      expect(findPii(`Org ${TENANT}\nTFN ${TFN}`)).toEqual([
         { kind: "tfn", path: "" },
       ]);
     });

@@ -5,6 +5,7 @@ import { Quote } from "xero-node";
 import { getClientHeaders } from "../helpers/get-client-headers.js";
 
 async function getQuotes(
+  tenantId: string,
   contactId: string | undefined,
   page: number,
   quoteNumber: string | undefined,
@@ -12,7 +13,7 @@ async function getQuotes(
   await xeroClient.authenticate();
 
   const quotes = await xeroClient.accountingApi.getQuotes(
-    xeroClient.tenantId,
+    tenantId,
     undefined, // ifModifiedSince
     undefined, // dateFrom
     undefined, // dateTo
@@ -32,12 +33,13 @@ async function getQuotes(
  * List all quotes from Xero
  */
 export async function listXeroQuotes(
+  tenantId: string,
   page: number = 1,
   contactId?: string,
   quoteNumber?: string,
 ): Promise<XeroClientResponse<Quote[]>> {
   try {
-    const quotes = await getQuotes(contactId, page, quoteNumber);
+    const quotes = await getQuotes(tenantId, contactId, page, quoteNumber);
 
     return {
       result: quotes,

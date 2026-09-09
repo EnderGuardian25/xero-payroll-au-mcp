@@ -1,15 +1,23 @@
 import { z } from "zod";
 import { listXeroItems } from "../../handlers/list-xero-items.handler.js";
 import { CreateXeroTool } from "../../helpers/create-xero-tool.js";
+import {
+  resolveTenantForTool,
+  tenantIdArg,
+} from "../../helpers/tenant-arg.js";
 
 const ListItemsTool = CreateXeroTool(
   "list-items",
   "Lists all items in Xero. Use this tool to get the item codes and descriptions to be used when creating invoices in Xero",
   {
+    ...tenantIdArg,
     page: z.number(),
   },
-  async ({ page }) => {
-    const response = await listXeroItems(page);
+  async ({ tenantId, page }) => {
+    const resolved = await resolveTenantForTool(tenantId, "items");
+    if (!resolved.ok) return resolved.result;
+
+    const response = await listXeroItems(resolved.tenant.tenantId, page);
 
     if (response.isError) {
       return {
@@ -28,7 +36,7 @@ const ListItemsTool = CreateXeroTool(
       content: [
         {
           type: "text" as const,
-          text: `Found ${items?.length || 0} items:`,
+          text: `Found ${items?.length || 0} items in ${resolved.tenant.tenantName}:`,
         },
         ...(items?.map((item) => ({
           type: "text" as const,

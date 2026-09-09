@@ -199,7 +199,25 @@ function readDef(schema: AnySchema): {
  */
 function syntheticString(key: string): string {
   if (/(date|modified(after|since)|since)/i.test(key)) return SYNTHETIC_DATE;
-  if (/(^|[^a-z])id(s)?$/i.test(key)) return SYNTHETIC_GUID;
+  /*
+   * Two alternatives, because an identifier argument is spelled two ways.
+   *
+   * `id` / `ids` / `contact_id` are caught by the first: `id` at the end,
+   * preceded by a non-letter or nothing. The `[^a-z]` prefix is what stops
+   * `valid` and `paid` being mistaken for identifiers.
+   *
+   * That prefix also excluded every camelCase name — `tenantId` has a letter
+   * before `Id` — which change 002 turned from a curiosity into a real
+   * failure: the driver fed `synthetic-tenantId` to tools whose `tenantId`
+   * must be a real authorised organisation, every driven call returned a
+   * resolution error, and both Guard A's capability check and Guard B's PII
+   * check went vacuous on tools that had done nothing. So the second
+   * alternative matches a lowercase-to-`Id` boundary, case-sensitively, which
+   * is unambiguous camelCase and cannot catch `valid`.
+   */
+  if (/(^|[^a-z])id(s)?$/i.test(key) || /[a-z](Id|Ids)$/.test(key)) {
+    return SYNTHETIC_GUID;
+  }
   return `synthetic-${key}`;
 }
 

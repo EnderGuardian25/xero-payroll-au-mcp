@@ -146,6 +146,23 @@ const PERMITTED_LOG_WORDS = new Set([
   "label",
   "prefix",
   "reason",
+  /*
+   * Added by change 002 for the runtime egress filter, and worth being
+   * explicit about because it extends what rule 4 permits.
+   *
+   * Rule 4 names three loggable things — tool names, tenant identifiers,
+   * durations. The filter needs a fourth: *where* it found something, so a
+   * redaction is diagnosable at all. It logs the kind of match ("tfn") and the
+   * field path ("content[0].text"), and never the matched value — `redactPii`
+   * is the only code that ever sees that, precisely so no caller can log it.
+   *
+   * A field path is metadata about a response, not the response. That is the
+   * distinction this addition rests on, and it is the one to re-examine if
+   * anyone widens this list further.
+   */
+  "kind",
+  "path",
+  "finding",
 ]);
 
 /**
@@ -467,6 +484,30 @@ export const KNOWN_LOG_CALLS = [
     file: "index.ts",
     callee: "console.error",
     args: ['"Error:"', "error"],
+  },
+  {
+    /*
+     * Added by change 002, and the first log site in this repo that is not an
+     * error report.
+     *
+     * The runtime egress filter warns when it strips a TFN, BSB or bank
+     * account number from a response. It logs the tool name, the kind of match
+     * and the field path — and never the matched value, which only
+     * `redactPii` ever sees. A redaction that produced no record would be
+     * indistinguishable from no redaction, which defeats the point of having a
+     * backstop.
+     *
+     * Registered here on purpose rather than allowed through by a looser rule.
+     * This inventory is what makes a new log call a decision: CI goes red, and
+     * somebody has to read the call and add it. That is the mechanism, so
+     * adding an entry has to come with the reason, as this one does.
+     */
+    file: "security/egress-filter.ts",
+    callee: "console.warn",
+    args: [
+      "`[egress] ${toolName} attempted to return ${finding.kind} at ` +\n" +
+        "            `${finding.path}; value redacted`",
+    ],
   },
 ];
 

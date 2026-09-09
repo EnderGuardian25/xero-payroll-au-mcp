@@ -8,7 +8,7 @@ import {
   PLANTED_PII,
   PLANTED_PII_VALUES,
 } from "./fake-xero-client.js";
-import { findPii } from "./pii-matcher.js";
+import { findPii } from "../security/pii-matcher.js";
 import {
   collectSourceFiles,
   findDeniedFieldReads,
@@ -163,7 +163,7 @@ describe("Guard B — no TFN, BSB or bank account number reaches a caller", () =
     // A second copy of the TFN checksum is the failure this clause exists to
     // stop: two implementations drift, and the one nobody is looking at is the
     // one that stops catching. Only pii-matcher.ts may define the algorithm.
-    const matcherPath = join(SRC, "__guards__", "pii-matcher.ts");
+    const matcherPath = join(SRC, "security", "pii-matcher.ts");
     const others = collectSourceFiles(SRC).concat(
       readdirSync(join(SRC, "__guards__"))
         .filter((f) => f.endsWith(".ts"))
