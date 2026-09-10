@@ -389,9 +389,24 @@ function inspectArgument(argument: ts.Expression): ArgumentFinding[] {
 
 /** Scan one source text. `file` is only used for reporting. */
 export function scanSource(file: string, text: string): Omit<ScanResult, "filesScanned"> {
+  /*
+   * Line endings are normalised before parsing, and this is a bug fix rather
+   * than tidiness.
+   *
+   * The baseline assertion pins each known log call's *rendered source text*,
+   * which for a multi-line call includes the newline between its parts. This
+   * repo normalises to CRLF on checkout, so the same source produced `\n` on a
+   * Linux CI runner and `\r\n` after a Windows checkout — the guard passed in
+   * CI and failed locally on identical code, which is the behaviour that
+   * teaches people to distrust a guard and start skipping it.
+   *
+   * Found by a checkout round-trip during the upstream-merge dry-run, not by
+   * the guard itself. Normalising here fixes every consumer at once, since
+   * `scanSourceTree` routes through this function.
+   */
   const source = ts.createSourceFile(
     file,
-    text,
+    text.replace(/\r\n/g, "\n"),
     ts.ScriptTarget.Latest,
     /* setParentNodes */ true,
   );

@@ -14,6 +14,13 @@ MCP has to build it.
 So this repo adds that surface: roughly 35 read-only Payroll AU tools, on top of the accounting
 tools the fork already provides.
 
+**State, as of 2026-09-09.** Two changes merged. The fork is stripped to **19 read tools** — 18
+accounting reads plus `list-tenants` — behind four build-failing guards, with bearer auth and
+per-call tenant selection. **No Payroll AU tool exists yet**, and nothing in this repo has ever
+issued a request to Xero: every test runs against a hand-written fake. The first real call is
+therefore still an unvalidated step. `HANDOFF.md` is the current state; this file is the standing
+rules.
+
 **Full detail on the API, the auth model, the hard gaps and the rate limits is in
 `docs/2026-07-21-xero-integration.md` — verified against the OpenAPI spec, not the doc site — and
 `docs/2026-09-08-mcp-brief.md`, which is the build brief.**
@@ -42,24 +49,76 @@ client's payroll is worse than no tool surface.
    never pass through to the caller. An automated check across the **whole** tool surface must fail
    the build if any tool can emit one — because a 35-tool surface will eventually gain a tool nobody
    reviewed closely, and that is exactly the one that leaks.
-3. **Both guards run over the entire registered surface, not per tool.** A guard you have to
-   remember to apply is not a guard.
-4. **Never log a payload.** Log tool names, tenant identifiers and durations. Not response bodies.
+3. **Every guard runs over the entire registered surface, not per tool.** A guard you have to
+   remember to apply is not a guard. There are now four — see "The guards, as built" below.
+4. **Never log a payload.** Log tool names, tenant identifiers and durations, and — added
+   deliberately in change 002 — the **field path** of a redaction, so a redaction is diagnosable at
+   all. Never response bodies, and never the matched value itself. A field path is metadata about a
+   response, not the response; that is the distinction this permits, and the one to re-examine if
+   anyone widens it again.
+5. **Never guess which Xero organisation to read.** A token can be authorised for many. Use the one
+   you were told, use the only one if there is exactly one, and otherwise **fail naming the
+   candidates**. Every response states which organisation it came from. Choosing silently — even
+   deterministically — hands a consumer one client's payroll while they believe it is another's,
+   which looks exactly like a correct answer.
+
+## The guards, as built
+
+| Guard | Asserts | Landed |
+|---|---|---|
+| **A — read-only** | Write tool directories absent; no mutating Xero API call site; no handler importing the SDK; every registered tool driven against a client that throws on non-read calls; registry and checked-in tool list match exactly both ways, count pinned | 001 |
+| **B — no PII** | No source file reads a denied field by dot *or* bracket access; no unreviewed Xero-derived value is serialised; every tool driven against planted checksum-valid PII renders none of it | 001 |
+| **C — no payload logs** | No response object or client-reachable value reaches a log call. A positive allowlist, because "never log a body" names nothing checkable while "log only these fields" does | 001 |
+| **D — runtime egress filter** | Last line before a response leaves: every string in every content entry scanned, matches stripped, warning naming tool and field path but never the value | 002 |
+
+Two things to understand before touching them:
+
+- **The checked-in tool list is a tripwire, not proof.** A name records only that somebody typed a
+  string. Read-only is proven by *capability* — clauses A2 to A4. Appending to that list to make CI
+  green is explicitly **not** an approval step.
+- **Every guard has a permanent negative control**, run on every CI invocation. A guard demonstrated
+  once at merge and trusted afterwards is indistinguishable, in CI output, from one that has
+  silently stopped seeing anything. Both of those turned out to be real: Guard B once went green
+  while checking nothing, and Guard C caught a defect the same week it was written.
 
 ## Auth: how a caller actually gets to a Xero org
 
-The official server offers two modes and the choice matters.
+**Decided, and built in change 002. This section describes what exists, not options to weigh.**
+
+- **A PKCE "Mobile or desktop" app**, created at `developer.xero.com/app/manage`. **Not** a Custom
+  Connection. It is free, and it has **no client secret** — an MCP server on someone's machine is a
+  public client, and a secret shipped to a public client is not a secret.
+- **The server runs bearer-only and holds no credential at rest.** The caller mints a token and
+  passes it in via `XERO_CLIENT_BEARER_TOKEN`. Renewal is the caller's job; the server never sees a
+  refresh token.
+- **`npm run mint-token`** performs the local PKCE exchange and prints an access token, a refresh
+  token and the authorised organisations. It writes nothing to disk, so no token file exists to be
+  committed by accident. Tokens last 30 minutes; re-run it.
+- **Tenant is chosen per call**, not per process. Every tool takes an optional `tenantId`;
+  `list-tenants` enumerates the options. See hard rule 5.
+
+**Honest limit, so nobody reads more into this than it delivers.** stdio MCP has no per-request
+header, so the token arrives as an environment variable at startup. This is per-call **tenant**
+selection against a per-process **identity** — one token, many organisations. It is *not* "one
+process serves many identities", which the brief's wording below implies. Open decision 7 in
+`HANDOFF.md` tracks whether anything actually needs that.
+
+### The two modes the fork inherited, for reference
+
+Custom Connections mode still exists in the code because it came from upstream. It is not the path
+this repo uses, and the specifics below are kept only so a future reader understands what was
+rejected and why.
 
 | Mode | Env | Shape |
 |---|---|---|
 | Custom Connections | `XERO_CLIENT_ID` + `XERO_CLIENT_SECRET` + `XERO_SCOPES` | `client_credentials`, **one Xero organisation per connection** |
 | Bearer token | `XERO_CLIENT_BEARER_TOKEN` | Caller arrives already holding a token. Takes precedence over `XERO_CLIENT_ID` if both are set |
 
-**Bearer-token mode is the one that scales, and it is the recommended shape here.** Credentials
-come from process environment variables, so one process serves one identity — fine for one person's
-Claude Desktop pointed at one org, useless for a service reading fifty client organisations. In
-bearer mode the caller does the OAuth and passes the token in, so the server holds **no credentials
-at rest** and can be safely shared.
+**Bearer-token mode is the one that scales, which is why it was chosen.** Credentials come from
+process environment variables, so one process serves one identity — fine for one person's Claude
+Desktop, useless for a service reading fifty client organisations from one process. In bearer mode
+the caller does the OAuth and passes the token in, so the server holds **no credentials at rest**
+and can be safely shared.
 
 Design consequence worth stating plainly: **prefer to hold nothing.** A server that stores per-org
 `client_id`/`client_secret` for many organisations becomes the single most attractive thing in the
@@ -148,6 +207,17 @@ by accident.
 - **Node/TypeScript**, matching the fork. Keep the upstream remote configured so fixes stay
   mergeable, and keep divergence in added files rather than edits to inherited ones wherever
   possible.
+- **Merging upstream: what actually happens.** Measured with a dry run, not assumed. A simulated
+  upstream commit touching four kinds of file gave:
+  - files we **edited** (`xero-client.ts`, `create-xero-tool.ts`) — **auto-merged cleanly**
+  - files we **deleted** (any stripped write tool or NZ payroll tool) — **`modify/delete` conflict**,
+    and git **leaves the upstream copy in the working tree**
+  The second is the trap: resolving with a careless `git add -A` **resurrects a write tool**. The
+  correct resolution is always `git rm` the path. Guard A catches it if you get it wrong — its
+  "write tool directories do not exist" clause fails even though nothing re-registered the tool,
+  which is exactly why that clause exists and why no separate path manifest was added.
+  After any upstream merge, run `npm ci` (not just `npm install`) — upstream's lockfile did not
+  install when this repo was forked.
 - **Capture real response samples per tool** into the test suite as tools are built. Recorded fixtures
   from a real AU organisation are the only way to know a hand-defined shape is right.
 - Docs live in `docs/`, named `YYYY-MM-DD-slug.md`, dated by when they were written. A superseding
@@ -160,4 +230,6 @@ by accident.
 - **An Australian Xero organisation with realistic current data.** Xero's stock demo company returns
   a 9% super rate from before 2022 — usable for testing plumbing, wrong for verifying anything about
   Payday Super, and wrong in front of an audience.
-- A Custom Connection on that org, created in the developer portal by someone with Payroll Admin.
+- **A PKCE app authorised against that org**, created at `developer.xero.com/app/manage`. Whoever
+  authorises it needs **Payroll Admin** in that organisation once payroll scopes are added. Not a
+  Custom Connection — see the Auth section.

@@ -43,6 +43,37 @@ describe("Guard C — no payload logging (FR9 / AC12)", () => {
     });
   });
 
+  describe("the scan is platform-independent", () => {
+    it("renders a multi-line log call identically for LF and CRLF sources", () => {
+      /*
+       * Regression test for a defect this guard shipped with in change 002.
+       *
+       * The baseline assertion below pins each known log call's rendered
+       * source text, which for a multi-line call includes the newline between
+       * its parts. This repo normalises to CRLF on checkout, so identical
+       * source produced `\n` on a Linux CI runner and `\r\n` after a Windows
+       * checkout: the guard passed in CI and failed locally on the same
+       * commit.
+       *
+       * That is worse than a plain bug. A guard that fails for reasons
+       * unrelated to what it guards is a guard people start skipping, and the
+       * whole argument for these checks is that they are not optional.
+       *
+       * `scanSource` now normalises line endings before parsing. This asserts
+       * it stays that way.
+       */
+      const lf = "console.warn(\n  `a ${toolName}` +\n  `b ${duration}`,\n);\n";
+      const crlf = lf.replace(/\n/g, "\r\n");
+
+      const fromLf = scanSource("probe.ts", lf).logCalls;
+      const fromCrlf = scanSource("probe.ts", crlf).logCalls;
+
+      expect(fromCrlf).toEqual(fromLf);
+      // Paired non-zero count: identical empty results would also be equal.
+      expect(fromLf.length).toBe(1);
+    });
+  });
+
   describe("the known-clean baseline", () => {
     it("contains exactly the known console calls, at their known sites", () => {
       const found = scan.logCalls
